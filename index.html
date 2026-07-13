@@ -2210,6 +2210,8 @@ function frame(tms){
   else if(G.state==='game') drawGame();
   else if(G.state==='over') drawGameover();
 
+  if(A.muted) txtO('🔇 음소거 — M 키로 해제',SW/2,SH*0.018,SW*0.026,'#fff','rgba(0,0,0,0.85)',SW*0.006);
+
   if(G.flash>0){ ctx.fillStyle=rgbStr(G.flashCol,G.flash*0.35); ctx.fillRect(0,0,SW,SH); }
   ctx.restore();
 }
