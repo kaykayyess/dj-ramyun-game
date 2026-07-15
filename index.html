@@ -526,7 +526,7 @@ function scratchFX(){
   tone({t,type:'sawtooth',f0:420,f1:110,gt:0.14,dur:0.18,v:0.16,filter:'lowpass',ff:1500});
 }
 function slurpFX(){
-  const ks=['slurp1','slurp2','slurp3','slurp4'].filter(k=>A.buf[k]);
+  const ks=['slurp1','slurp2','slurp4'].filter(k=>A.buf[k]);
   if(ks.length){
     A.slurpIdx=((A.slurpIdx||0)+1)%ks.length;          /* 매 그릇 다른 후루룹 — 로테이션 */
     if(playBuf(ks[A.slurpIdx],1.0,1,{group:'slurp'})) return;
@@ -583,7 +583,7 @@ function resolveBeat(want){
 }
 A.mraw={}; A.mbuf={}; A.bgm=null; A.bgmKey='';
 /* 추가 SFX 후보(파일 넣으면 자동 활성): 후루룩 먹는 소리 · 냄비 보글보글 루프 */
-const EXTRA_SFX={slurp1:['SLURP1.wav'],slurp2:['SLURP2.wav'],slurp3:['SLURP3.wav'],slurp4:['SLURP4.wav'],
+const EXTRA_SFX={slurp1:['SLURP1.wav'],slurp2:['SLURP2.wav'],slurp4:['SLURP4.wav'],   /* SLURP3는 삭제됨 */
                  boil:['BOIL.wav','BOIL.mp3','boil.wav','boil.mp3']};
 for(const k in EXTRA_SFX){
   (async()=>{ for(const f of EXTRA_SFX[k]){
@@ -624,7 +624,7 @@ function bgmUpdate(){
   bgmStop();
   const src=A.ctx.createBufferSource(); src.buffer=A.mbuf[want]; src.loop=true;
   const g=A.ctx.createGain(); g.gain.value=0.001;
-  g.gain.setTargetAtTime(0.34,A.ctx.currentTime,0.25);   /* 효과음이 주인공 — 비트는 받쳐주는 볼륨 */
+  g.gain.setTargetAtTime(0.42,A.ctx.currentTime,0.25);   /* 효과음이 주인공 — 비트는 좀 더 든든하게 */
   src.connect(g); g.connect(A.master);
   const tr=(A.mtrim&&A.mtrim[want])||{lead:0,end:src.buffer.duration};
   src.loopStart=tr.lead; src.loopEnd=tr.end;           /* 무음 없는 구간만 루프 → 드리프트 방지 */
@@ -665,8 +665,8 @@ function bgmDuck(){                                      /* 사이드체인: 버
   if(!A.bgm) return;
   const t=A.ctx.currentTime, g=A.bgm.g.gain;
   g.cancelScheduledValues(t);
-  g.setTargetAtTime(0.14,t,0.015);
-  g.setTargetAtTime(0.34,t+0.13,0.14);
+  g.setTargetAtTime(0.18,t,0.015);
+  g.setTargetAtTime(0.42,t+0.13,0.14);
 }
 
 function schedulerUpdate(){
