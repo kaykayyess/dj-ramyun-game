@@ -474,7 +474,7 @@ function orderParams(no){
   const mkey=A.bgmKey||(A.mbuf&&(A.mbuf.beat1?'beat1':A.mbuf.beat2?'beat2':''))||'';
   const bpm = mkey ? A.MUSIC_BPM[mkey] : Math.min(86+(no-1)*1.8, 160);
   const r=Math.random();
-  const secN = no<=16?1 : no<=22?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
+  const secN = no<=14?1 : no<=20?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
   /* 인분 성장 곡선: 1인분만 → 2인분 → 3인분 → 4인분 */
   let mn=1,mx=1;
   if(no>=5){ mx=2; }
@@ -482,8 +482,8 @@ function orderParams(no){
   if(no>=13){ mn=2; mx=4; }
   /* 콤보가 쌓이면 몰아친다 — 미스로 콤보가 깨지면 다시 숨 돌릴 틈 */
   /* 반박자 노트 섞임 비율 — 주문이 쌓일수록, 콤보가 높을수록 서서히 */
-  const dbl = clamp((no-14)/26,0,0.28) + (G.combo>=30?0.1:0);   /* 밀도는 살짝만 — 주 난이도는 속도 */
-  return {bpm, secN, mn, mx, dbl:clamp(dbl,0,0.85)};
+  const dbl = clamp((no-8)/20,0,0.62) + (G.combo>=25?0.12:0) + (G.combo>=50?0.08:0);   /* 후반은 연타 지옥 */
+  return {bpm, secN, mn, mx, dbl:clamp(dbl,0,0.8)};
 }
 function pushOrder(){
   const no=++G.orderCount;
@@ -496,8 +496,8 @@ function pushOrder(){
   if(no>=12 && Math.random()<0.35){ secs.push('jjaguri'); pool=pool.filter(f=>f!=='jjapa'&&f!=='neogury'); }  /* 짜파구리는 4인분 경험 후 해금 */
   while(secs.length<p.secN && pool.length) secs.push(pool.splice(irand(0,pool.length-1),1)[0]);
   if(!secs.length) secs.push('ramyun');
-  G.diff=Math.min(1,(no-1)/26);                    /* 난이도 지표 (판정창·점수 배율) */
-  const gap = Math.max(2, Math.round(4.4 - no*0.09 - G.combo/16));  /* 콤보 높을수록 텀이 짧아진다 */
+  G.diff=Math.min(1,(no-1)/22);                    /* 난이도 지표 (판정창·점수 배율) */
+  const gap = Math.max(1, Math.round(4.4 - no*0.12 - G.combo/16));  /* 후반엔 주문이 거의 연달아 */
   let t=G.cursorT;
   if(A.bgmAnchor&&A.bgmBpm){                       /* 음악 박자선에 스냅 */
     const bl=60/A.bgmBpm;
@@ -660,7 +660,7 @@ function update(dt){
   if(G.cursorT - pnow() < 10) pushOrder();
   if(G.noteIdx>220){ G.notes.splice(0,200); G.noteIdx-=200; }
   /* 난이도 = 속도감: 주문·콤보에 따라 노트가 넓은 간격 그대로 더 빠르게 흐른다 */
-  const scTgt=0.27+clamp((G.curOrderNo-4)*0.013,0,0.21)+Math.min(0.07,G.combo*0.0015);
+  const scTgt=0.27+clamp((G.curOrderNo-4)*0.016,0,0.30)+Math.min(0.10,G.combo*0.0018);
   G.scroll=lerp(G.scroll,scTgt,Math.min(1,dt*0.7));
   const cn=G.notes[G.noteIdx];
   if(cn){
