@@ -152,7 +152,8 @@ function playBuf(k,v=1,rate=1,o={}){
   if(o.group){                       /* choke: one sound per group — new one cuts the old */
     A.grp=A.grp||{};
     const prev=A.grp[o.group];
-    if(prev){ try{ prev.g.gain.setTargetAtTime(0,t,0.14); prev.src.stop(t+0.9); }catch(e){} }   /* 중첩 순간에만 부드럽게 크로스페이드 */
+    if(prev){ const fast=o.cut==='fast';
+      try{ prev.g.gain.setTargetAtTime(0,t,fast?0.03:0.14); prev.src.stop(t+(fast?0.18:0.9)); }catch(e){} }   /* 중첩 시 크로스페이드 (fast=즉시 컷) */
   }
   const src=A.ctx.createBufferSource(); src.buffer=b; src.playbackRate.value=rate;
   let off=0;
@@ -570,10 +571,12 @@ function applyJudge(j,note){
   if(note.type==='play'){
     const serv=clamp(note.order.counts[note.sec||note.flavor]||1,1,4);
     let played=false;
-    if(note.flavor==='jjaguri')        /* 짜파구리 전용 스팅어 (1개/2개) */
-      played=playBuf('guri'+serv,vol*0.9,1,{group:'play'})||playBuf('jja'+serv,vol*0.9,1,{group:'play'});
-    else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.9,1,{group:'play'});
+    if(note.flavor==='jjaguri')        /* 짜파구리: 전용 스팅어만, 이전 소리 즉시 컷 */
+      played=playBuf('guri'+serv,vol*0.95,1,{group:'play',cut:'fast',skipSilence:true})
+           ||playBuf('jja'+serv,vol*0.9,1,{group:'play',cut:'fast',skipSilence:true});
+    else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.9,1,{group:'play',skipSilence:true});
     if(!played) dropFX(note.flavor,vol);
+    spawnFX({kind:'drop',flavor:note.flavor,t0:G.time});   /* 타이포 = 사운드 시작과 동시 */
     G.flash=0.45; G.flashCol=hex2rgb(FLAVORS[note.flavor].color);
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
     T3.punch=1; T3.burst=1;
@@ -632,7 +635,7 @@ function finishOrder(order){
     if(order.counts.jjaguri && !G.dying){
       const already=G.time<G.drop;                /* 연속 드랍: 시간만 연장, 사운드 중첩 금지 */
       G.drop=G.time+5.2; if(!already) G.dropT0=G.time;
-      if(!already){ dropTheBassFX(); playBuf('drop_voice',0.95,1,{group:'voice'}); }
+      /* 오디오는 짜파구리 전용 스팅어 하나만 — 드랍은 비주얼로 말한다 */
       T3.punch=1.4; T3.burst=1.6; G.shake=Math.max(G.shake,10);
       for(let i=0;i<30;i++) G.confetti.push({x:rand(0,SW),y:rand(-SH*0.15,0),vx:rand(-60,60),vy:rand(80,220),rot:rand(0,6.3),vr:rand(-5,5),c:['#F2C14E','#E8431F','#FFF6E0'][i%3],s:rand(5,10)});
     }
@@ -2047,7 +2050,7 @@ function drawGame(){
       ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
       ctx.translate(SW*0.5,SH*0.313); ctx.scale(sc,sc);
       const AK={ramyun:'t_egg',buldak:'t_onfire',jjapa:'t_sauce',neogury:'t_shots',jjaguri:'t_mix'};
-      if(!drawArt(AK[f.flavor]||'t_egg',0,0,SW*0.52))
+      if(!drawArt(AK[f.flavor]||'t_egg',0,0,SW*0.42))
         txtO('DROP!',0,0,SW*0.078,FLAVORS[f.flavor].color,'#140c04',SW*0.017);
       ctx.restore();
     }else if(f.kind==='artslam'){
