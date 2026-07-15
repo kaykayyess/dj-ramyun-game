@@ -567,6 +567,7 @@ function judgeFX(j){
 }
 /* ---------- BGM: 직접 만든 비트 루프 (sfx/BEAT1·BEAT2) ---------- */
 A.MUSIC_BPM={beat1:71.2,beat2:90.56,beat3:92.16};   /* 자기상관 실측값 (3단계 비트) */
+A.MUSIC_VOL={beat1:1.2,beat2:1,beat3:1};            /* beat1 원본이 작아서 +20% */
 A.bgmAnchor=0; A.bgmBpm=0;
 /* 진행형 비트: 초반 beat1(느긋) → 중반 beat2 → 후반/피버 beat3(최고조) */
 const BGM_FILES={beat1:['beat1.mp3','beat1.wav','BEAT1.mp3','Beat1.mp3'],
@@ -627,7 +628,8 @@ function bgmUpdate(){
   bgmStop();
   const src=A.ctx.createBufferSource(); src.buffer=A.mbuf[want]; src.loop=true;
   const g=A.ctx.createGain(); g.gain.value=0.001;
-  g.gain.setTargetAtTime(0.55,A.ctx.currentTime,0.25);   /* 비트 든든하게 (+30%) */
+  A.bgmVol=0.55*(A.MUSIC_VOL[want]||1);
+  g.gain.setTargetAtTime(A.bgmVol,A.ctx.currentTime,0.25);   /* 비트 든든하게 */
   src.connect(g); g.connect(A.master);
   const tr=(A.mtrim&&A.mtrim[want])||{lead:0,end:src.buffer.duration};
   src.loopStart=tr.lead; src.loopEnd=tr.end;           /* 무음 없는 구간만 루프 → 드리프트 방지 */
@@ -668,8 +670,8 @@ function bgmDuck(){                                      /* 사이드체인: 버
   if(!A.bgm) return;
   const t=A.ctx.currentTime, g=A.bgm.g.gain;
   g.cancelScheduledValues(t);
-  g.setTargetAtTime(0.23,t,0.015);
-  g.setTargetAtTime(0.55,t+0.13,0.14);
+  g.setTargetAtTime((A.bgmVol||0.55)*0.42,t,0.015);
+  g.setTargetAtTime(A.bgmVol||0.55,t+0.13,0.14);
 }
 
 function schedulerUpdate(){
@@ -1130,8 +1132,8 @@ function mkChibi(type){
     const br=add(new THREE.Mesh(new THREE.BoxGeometry(0.32,0.03,0.17),H),0,0.875,0.26);
     br.rotation.x=0.2;                              /* 챙 들어올림 — 얼굴 안 덮게 */
   }else if(P.hair==='buzz'){
-    const b=add(new THREE.Mesh(new THREE.SphereGeometry(0.305,20,10,0,Math.PI*2,0,Math.PI*0.45),H),0,0.72,0);
-    b.scale.y=0.8;
+    const b=add(new THREE.Mesh(new THREE.SphereGeometry(0.305,20,10,0,Math.PI*2,0,Math.PI*0.45),H),0,0.78,0);
+    b.scale.y=0.8;                                  /* 돔 상단이 정수리(1.0) 위로 — 대머리 방지 */
   }else if(P.hair==='shag'){
     add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.45),H),0,0.72,-0.02);
     for(let i=0;i<6;i++){ const a=Math.PI*0.75+(i/5)*Math.PI*1.5;   /* 옆·뒤만 — 얼굴은 비워둔다 */
@@ -1148,7 +1150,7 @@ function mkChibi(type){
     const bk=add(new THREE.Mesh(new THREE.SphereGeometry(0.16,12,8),H),0,0.5,-0.22);
     bk.scale.set(1.1,1.7,0.7);
   }else if(P.hair==='flat'){
-    const f=add(new THREE.Mesh(new THREE.SphereGeometry(0.31,20,10,0,Math.PI*2,0,Math.PI*0.44),H),0,0.73,-0.01);
+    const f=add(new THREE.Mesh(new THREE.SphereGeometry(0.31,20,10,0,Math.PI*2,0,Math.PI*0.44),H),0,0.79,-0.01);
     f.scale.y=0.8;
   }else if(P.hair==='bangs'){
     add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.45),H),0,0.715,-0.015);
@@ -1160,7 +1162,7 @@ function mkChibi(type){
     add(new THREE.Mesh(new THREE.CylinderGeometry(0.37,0.37,0.03,22),H),0,0.9,-0.02);
     add(new THREE.Mesh(new THREE.SphereGeometry(0.21,16,10,0,Math.PI*2,0,Math.PI*0.55),H),0,0.9,-0.02);
   }else if(P.hair==='pony'){
-    const c=add(new THREE.Mesh(new THREE.SphereGeometry(0.31,20,10,0,Math.PI*2,0,Math.PI*0.44),H),0,0.72,-0.01);
+    const c=add(new THREE.Mesh(new THREE.SphereGeometry(0.31,20,10,0,Math.PI*2,0,Math.PI*0.44),H),0,0.77,-0.01);
     c.scale.y=0.85;
     for(const s of[-1,1]){ const b=add(new THREE.Mesh(new THREE.SphereGeometry(0.055,8,6),H),s*0.26,0.52,-0.08);
       b.scale.set(0.6,2.4,0.6); b.rotation.z=-s*0.15; }
