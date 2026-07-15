@@ -219,7 +219,7 @@ const ART_FILES={
   t_kidding:'Areyoukiddingme.svg', t_boss:'Bosslevel 2.svg',
   t_egg:'Droptheegg.svg', t_mix:'In the mix!.svg', t_sauce:'Inthesauce.svg',
   t_onfire:'Onfire.svg', t_shots:'Shots!!.svg',
-  t_letsgo:'Letsgo!.svg', t_slurp:'후루룹.svg',
+  t_letsgo:'Letsgo!.svg', t_slurp:'후루룹.svg', t_slurp2:'Slurp.svg', t_chop:'Chop!.svg',
   t_banger:'Thatsabanger.svg', t_monster:'Thatsamonster.svg',
   t_illegal:'That’sillegal.svg', t_crazy:'Youcrazy.svg', t_hits:'Youcookinhits!.svg',
   t_ddrip:'Doubledrip.svg', t_triple:'Tripletailsbaby!.svg', t_dfire:'Double fire!.svg',
@@ -574,8 +574,8 @@ function applyJudge(j,note){
       played=playBuf('guri'+serv,vol*0.95,1,{group:'play',cut:'fast',skipSilence:true})
            ||playBuf('jja'+serv,vol*0.9,1,{group:'play',cut:'fast',skipSilence:true});
     else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.9,1,{group:'play',skipSilence:true});
-    if(!played) dropFX(note.flavor,vol);
-    spawnFX({kind:'drop',flavor:note.flavor,t0:G.time});   /* 타이포 = 사운드 시작과 동시 */
+    if(played) spawnFX({kind:'drop',flavor:note.flavor,t0:G.time});   /* 타이포 = 사운드와 동시 (사운드 없으면 생략) */
+    else dropFX(note.flavor,vol);
     G.flash=0.45; G.flashCol=hex2rgb(FLAVORS[note.flavor].color);
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
     T3.punch=1; T3.burst=1;
@@ -1862,13 +1862,13 @@ function pxPerBeat(){ return SW*0.27; }
 function drawNoteDisc(x,y,n,dNear){
   const F=FLAVORS[n.flavor];
   const isPlay=n.type==='play';
-  const r=(isPlay?SW*0.066:SW*0.052)*(1+dNear*0.12);
+  const r=SW*0.066*(1+dNear*0.12);               /* 라면 노트도 플레이와 동일 크기 */
   ctx.save();
   /* shadow */
   ctx.fillStyle='rgba(0,0,0,0.3)';
   ctx.beginPath(); ctx.ellipse(x+2,y+r*0.55,r*0.9,r*0.35,0,0,7); ctx.fill();
   /* glow near judgment */
-  if(dNear>0.25){ ctx.shadowColor=isPlay?'#ff3b1e':F.color; ctx.shadowBlur=16*dNear; }
+  if(dNear>0.25){ ctx.shadowColor=isPlay?'#ffffff':F.color; ctx.shadowBlur=16*dNear; }
   /* disc */
   ctx.fillStyle='#131110';
   ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
@@ -1878,10 +1878,10 @@ function drawNoteDisc(x,y,n,dNear){
   ctx.beginPath(); ctx.arc(x,y,r*0.8,0,7); ctx.stroke();
   ctx.beginPath(); ctx.arc(x,y,r*0.65,0,7); ctx.stroke();
   /* outer ring */
-  ctx.strokeStyle=isPlay?'#ff3b1e':F.color; ctx.lineWidth=isPlay?3.5:2.6;
+  ctx.strokeStyle=isPlay?'rgba(255,255,255,0.92)':F.color; ctx.lineWidth=isPlay?4:2.6;   /* 플레이 = 화이트 LED 링 */
   ctx.beginPath(); ctx.arc(x,y,r-1.6,0,7); ctx.stroke();
   /* label */
-  ctx.fillStyle=isPlay?'#ff3b1e':F.color;
+  ctx.fillStyle=isPlay?'#1b1a1f':F.color;        /* 플레이 센터 = 실제 버튼처럼 블랙 */
   ctx.beginPath(); ctx.arc(x,y,r*0.48,0,7); ctx.fill();
   if(isPlay){
     ctx.fillStyle='#fff';
@@ -2250,7 +2250,8 @@ function drawEat(){
     }
     /* wobbling slurp title */
     ctx.save(); ctx.translate(SW*0.74,cy-SH*0.118); ctx.rotate(Math.sin(t*7)*0.05);
-    if(!drawArt('t_slurp',0,0,SH*0.105)) txtO('후루룩~ 🍜',0,0,SW*0.042,'#fff','rgba(20,10,0,0.85)',SW*0.009);
+    const slk=['t_slurp','t_slurp2','t_chop'][G.bowls%3];   /* 그릇마다 다른 먹방 타이포 */
+    if(!drawArt(slk,0,0,SH*0.105)) txtO('후루룩~ 🍜',0,0,SW*0.042,'#fff','rgba(20,10,0,0.85)',SW*0.009);
     ctx.restore();
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
