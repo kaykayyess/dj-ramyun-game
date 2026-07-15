@@ -216,13 +216,12 @@ const bassN=(t,f,dur,v=0.25)=>tone({t,type:'sawtooth',f0:f,dur,v,filter:'lowpass
 /* ---------- SVG 아트 (art/ 폴더): 마스코트 + 코믹 타이포 ---------- */
 const ART_FILES={
   m_ramyun:'Ram.svg', m_buldak:'Burr.svg', m_jjapa:'jjap.svg', m_neogury:'Neo.svg',
-  t_kidding:'Areyoukiddingme.svg', t_boss:'Bosslevel 2.svg',
-  t_egg:'Droptheegg.svg', t_mix:'In the mix!.svg', t_sauce:'Inthesauce.svg',
-  t_onfire:'Onfire.svg', t_shots:'Shots!!.svg',
-  t_letsgo:'Letsgo!.svg', t_slurp:'후루룹.svg', t_slurp2:'Slurp.svg', t_chop:'Chop!.svg',
-  t_banger:'Thatsabanger.svg', t_monster:'Thatsamonster.svg',
-  t_illegal:'That’sillegal.svg', t_crazy:'Youcrazy.svg', t_hits:'Youcookinhits!.svg',
-  t_ddrip:'Doubledrip.svg', t_triple:'Tripletailsbaby!.svg', t_dfire:'Double fire!.svg',
+  /* 플레이 타이포 — 사운드 파일과 이름 1:1 (neo2는 shots!로 대체) */
+  p_ram1:'ram play.svg',  p_ram2:'ram2 play.svg',  p_ram3:'ram3 play.svg',  p_ram4:'ram4 play.svg',
+  p_bul1:'burr play.svg', p_bul2:'burr2 play.svg', p_bul3:'burr3 play.svg', p_bul4:'burr4 play.svg',
+  p_jja1:'jjap play.svg', p_jja2:'jjap2 play.svg', p_jja3:'jjap3 play.svg', p_jja4:'jjap4 play.svg',
+  p_neo1:'neo play.svg',  p_neo2:'shots!.svg',     p_neo3:'neo3 play.svg',  p_neo4:'neo4 play.svg',
+  t_slurp:'후루룹.svg', t_slurp2:'Slurp.svg', t_chop:'Chop!.svg',
   t_sesh:'Timeforcokinsesh.svg',
   logo:'DJ_Ramyun_logo_800x800.png',
 };
@@ -286,7 +285,7 @@ function scratchFX(){
   tone({t,type:'sawtooth',f0:420,f1:110,gt:0.14,dur:0.18,v:0.16,filter:'lowpass',ff:1500});
 }
 function slurpFX(){
-  const ks=['slurp1','slurp2','slurp3'].filter(k=>A.buf[k]);
+  const ks=['slurp1','slurp2','slurp3','slurp4'].filter(k=>A.buf[k]);
   if(ks.length){
     A.slurpIdx=((A.slurpIdx||0)+1)%ks.length;          /* 매 그릇 다른 후루룹 — 로테이션 */
     if(playBuf(ks[A.slurpIdx],1.0,1,{group:'slurp'})) return;
@@ -329,7 +328,7 @@ const BGM_FILES={beat1:['BEAT1.wav','BEAT1.mp3','beat1.wav','beat1.mp3','Beat1.w
                  beat2:['BEAT2.wav','BEAT2.mp3','beat2.wav','beat2.mp3','Beat2.wav','Beat2.mp3']};
 A.mraw={}; A.mbuf={}; A.bgm=null; A.bgmKey='';
 /* 추가 SFX 후보(파일 넣으면 자동 활성): 후루룩 먹는 소리 · 냄비 보글보글 루프 */
-const EXTRA_SFX={slurp1:['SLURP1.wav'],slurp2:['SLURP2.wav'],slurp3:['SLURP3.wav'],
+const EXTRA_SFX={slurp1:['SLURP1.wav'],slurp2:['SLURP2.wav'],slurp3:['SLURP3.wav'],slurp4:['SLURP4.wav'],
                  boil:['BOIL.wav','BOIL.mp3','boil.wav','boil.mp3']};
 for(const k in EXTRA_SFX){
   (async()=>{ for(const f of EXTRA_SFX[k]){
@@ -528,7 +527,7 @@ function startGame(){
   setState('game');
   if(A.ctx){ A.nextBeat=anow()+0.05; A.beatN=0; bgmUpdate(); }   /* 먼저 비트를 걸고 */
   pushOrder(); pushOrder();                                       /* 그 그리드 위에 주문 생성 */
-  spawnFX({kind:'artslam',art:'t_letsgo',t0:G.time+0.4});
+  spawnFX({kind:'artslam',art:'',text:"LET'S GO!",t0:G.time+0.4});
 }
 
 /* ---------- judgment ---------- */
@@ -557,8 +556,8 @@ function applyJudge(j,note){
     if(G.combo>=25 && G.combo%25===0){             /* 25 단위 콤보 축포 */
       G.flash=0.5; G.flashCol=[255,205,60];
       G.shake=Math.max(G.shake,7);
-      const mk=G.combo>=125?'t_boss':G.combo>=100?'t_crazy':G.combo>=75?'t_illegal':G.combo>=50?'t_monster':'t_hits';
-      spawnFX({kind:'artslam',art:mk,t0:G.time});
+      const mt=G.combo>=125?'BOSS LEVEL':G.combo>=100?'YOU CRAZY!':G.combo>=75?"THAT'S ILLEGAL":G.combo>=50?"THAT'S A MONSTER":"YOU COOKIN' HITS!";
+      spawnFX({kind:'artslam',art:'',text:mt,t0:G.time});
       feverFX();
       for(let i=0;i<18;i++) G.confetti.push({x:SW*0.5+rand(-SW*0.22,SW*0.22),y:SH*0.38,vx:rand(-90,90),vy:rand(-190,-70),rot:rand(0,6.3),vr:rand(-5,5),c:['#F2C14E','#ffe95e','#fff','#E8431F'][i%4],s:rand(4,9)});
     }
@@ -574,7 +573,7 @@ function applyJudge(j,note){
       played=playBuf('guri'+serv,vol*0.95,1,{group:'play',cut:'fast',skipSilence:true})
            ||playBuf('jja'+serv,vol*0.9,1,{group:'play',cut:'fast',skipSilence:true});
     else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.9,1,{group:'play',skipSilence:true});
-    if(played) spawnFX({kind:'drop',flavor:note.flavor,t0:G.time});   /* 타이포 = 사운드와 동시 (사운드 없으면 생략) */
+    if(played) spawnFX({kind:'drop',flavor:note.flavor,serv,t0:G.time});   /* 타이포 = 사운드와 동시 (사운드 없으면 생략) */
     else dropFX(note.flavor,vol);
     G.flash=0.45; G.flashCol=hex2rgb(FLAVORS[note.flavor].color);
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
@@ -620,9 +619,9 @@ function finishOrder(order){
     G.score+=b; G.bowls++; G.perfectOrders++;
     G.pStreak=(G.pStreak||0)+1;                    /* 연속 퍼펙트 콜아웃 (드랍 순간엔 생략 — 한 번에 하나만) */
     if(!(order.counts.jjaguri&&!G.dying)){
-      if(G.pStreak===2) spawnFX({kind:'artslam',art:'t_ddrip',t0:G.time+0.5});
-      else if(G.pStreak===3) spawnFX({kind:'artslam',art:'t_triple',t0:G.time+0.5});
-      else if(G.pStreak===5) spawnFX({kind:'artslam',art:'t_dfire',t0:G.time+0.5});
+      if(G.pStreak===2) spawnFX({kind:'artslam',art:'',text:'DOUBLE DRIP',t0:G.time+0.5});
+      else if(G.pStreak===3) spawnFX({kind:'artslam',art:'',text:'TRIPLE TAILS BABY!',t0:G.time+0.5});
+      else if(G.pStreak===5) spawnFX({kind:'artslam',art:'',text:'DOUBLE FIRE!',t0:G.time+0.5});
     }
     const gotHeart = G.lives<3;
     if(gotHeart) G.lives=Math.min(3,G.lives+1);
@@ -1999,8 +1998,7 @@ function drawGame(){
     if(dt2<1.4){                                    /* title slam */
       const sc=dt2<0.25?easeOut(dt2/0.25)*1.35:1.35-easeOut((dt2-0.25)/0.3)*0.35;
       ctx.translate(SW/2,SH*0.565); ctx.scale(sc,sc); ctx.rotate(Math.sin(dt2*18)*0.02);
-      if(!drawArt('t_banger',0,0,SW*0.66))
-        txtO('🔥 THE DROP!! 🔥',0,0,SW*0.074,'#ffe95e','#7a1400',SW*0.017);
+      comicText("THAT'S A BANGER!",0,0,SW*0.062,'#F5E056');
     }
     ctx.restore();
   }
@@ -2020,7 +2018,7 @@ function drawGame(){
       const sc=cfg[2]*(1+0.4*Math.sin(Math.min(t*10,Math.PI)));
       ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
       ctx.translate(f.x,f.y-t*14); ctx.scale(sc,sc);
-      if(!(f.j==='miss'&&drawArt('t_kidding',0,0,SW*0.26))){
+      if(!(f.j==='miss'&&(comicText('ARE YOU KIDDING ME?!',0,0,SW*0.036,'#FF6B5A')||true))){
         const jc={perfect:'#FFF6D6',good:'#D9EFC0',bad:'#CFC8BE',miss:'#FF6B5A'}[f.j];
         if(f.j!=='perfect') ctx.globalAlpha*=0.7;
         comicText(cfg[0],0,0,SW*(f.j==='perfect'?0.046:0.036),jc);
@@ -2048,16 +2046,19 @@ function drawGame(){
       const sc=1+0.5*Math.sin(Math.min(t*8,Math.PI));
       ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
       ctx.translate(SW*0.5,SH*0.313); ctx.scale(sc,sc);
-      const AK={ramyun:'t_egg',buldak:'t_onfire',jjapa:'t_sauce',neogury:'t_shots',jjaguri:'t_mix'};
-      if(!drawArt(AK[f.flavor]||'t_egg',0,0,SW*0.42))
-        txtO('DROP!',0,0,SW*0.078,FLAVORS[f.flavor].color,'#140c04',SW*0.017);
+      const pk=f.flavor==='jjaguri'?null:'p_'+SFX_KEY[f.flavor]+(f.serv||1);
+      const FB={ramyun:'DROP THE EGG!',buldak:'ON FIRE!!',jjapa:'IN THE SAUCE',
+                neogury:'SHOTS!!',jjaguri:(f.serv||1)>=2?'DOUBLE MIX!!':'IN THE MIX!'};
+      if(!(pk&&drawArt(pk,0,0,SW*0.42)))
+        comicText(FB[f.flavor]||'DROP!',0,0,SW*0.052,'#F5E056');
       ctx.restore();
     }else if(f.kind==='artslam'){
       if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
       const sc2=t<0.18?easeOut(t/0.18)*1.25:1.25-easeOut((t-0.18)/0.5)*0.25;
       ctx.save(); ctx.globalAlpha=clamp(1-easeIn((t-0.95)/0.45),0,1);
       ctx.translate(SW/2,SH*0.425); ctx.scale(sc2,sc2); ctx.rotate(Math.sin(t*9)*0.03);
-      drawArt(f.art,0,0,SW*0.5);
+      if(!drawArt(f.art,0,0,SW*0.5)&&f.text)
+        comicText(f.text,0,0,SW*0.058,'#F5E056');           /* 파일 없으면 동일 무드로 생성 */
       ctx.restore();
     }else if(f.kind==='heartbreak'){
       const a=1-t/0.8;
