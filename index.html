@@ -11,7 +11,7 @@
 <title>DJ Ramyun — ORDER RUSH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Shrikhand&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Shrikhand&family=Bangers&display=swap" rel="stylesheet">
 <style>
 html,body{margin:0;padding:0;background:#0b0906;height:100%;overflow:hidden;
   -webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none;
@@ -150,7 +150,7 @@ function playBuf(k,v=1,rate=1,o={}){
   if(o.group){                       /* choke: one sound per group — new one cuts the old */
     A.grp=A.grp||{};
     const prev=A.grp[o.group];
-    if(prev){ try{ prev.g.gain.setTargetAtTime(0,t,0.04); prev.src.stop(t+0.2); }catch(e){} }
+    if(prev){ try{ prev.g.gain.setTargetAtTime(0,t,0.14); prev.src.stop(t+0.9); }catch(e){} }   /* 중첩 순간에만 부드럽게 크로스페이드 */
   }
   const src=A.ctx.createBufferSource(); src.buffer=b; src.playbackRate.value=rate;
   const vv=v*((A.norm&&A.norm[k])||1);
@@ -358,17 +358,17 @@ const G = {
   bg:hex2rgb('#F5B31B'),
   padRects:[], padPress:{}, btnRects:{}
 };
-const diffMult=()=>1+(G.bpm-88)/50;
-function windows(){ let l = clamp(1.42 - (G.bpm-88)/110, 0.8, 1.42);
+const diffMult=()=>1+(G.bpm-86)/50;
+function windows(){ let l = clamp(1.5 - (G.bpm-86)/120, 0.85, 1.5);
   if(G.tut) l*=1.35;                               /* 연습 주문은 아주 관대하게 */
   return { p:0.09*l, g:0.18*l, b:0.27*l }; }
 
 function orderParams(no){
-  const bpm = Math.min(88+(no-1)*2.5, 168);        /* 일반인 기준 완만한 곡선 */
+  const bpm = Math.min(86+(no-1)*1.8, 160);        /* 아주 완만하게 — 일반인 기준 */
   const r=Math.random();
-  const secN = no<=12?1 : no<=18?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
-  const mx = no<=6?2 : no<=12?3 : 4;
-  const tap = no<16?1 : no<24?0.7 : 0.6;           /* 더블타임은 16주문부터 */
+  const secN = no<=14?1 : no<=20?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
+  const mx = no<=8?2 : no<=14?3 : 4;
+  const tap = no<20?1 : no<28?0.72 : 0.62;         /* 더블타임은 20주문부터 */
   return {bpm, secN, mn:1, mx, tap};
 }
 function pushOrder(){
@@ -382,7 +382,7 @@ function pushOrder(){
   if(no>=3 && Math.random()<0.38){ secs.push('jjaguri'); pool=pool.filter(f=>f!=='jjapa'&&f!=='neogury'); }
   while(secs.length<p.secN && pool.length) secs.push(pool.splice(irand(0,pool.length-1),1)[0]);
   if(!secs.length) secs.push('ramyun');
-  const gap = Math.max(1.7, 3.9 - no*0.18);        /* 초반엔 사운드 감상 타임, 점차 조여짐 */
+  const gap = Math.max(1.8, 4.4 - no*0.13);        /* 초반엔 사운드 감상 타임, 천천히 조여짐 */
   let t=G.cursorT;
   for(const f of secs){
     if(f==='jjaguri'){
@@ -520,7 +520,6 @@ function finishOrder(order){
     if(order.counts.jjaguri && !G.dying){
       const already=G.time<G.drop;                /* 연속 드랍: 시간만 연장, 사운드 중첩 금지 */
       G.drop=G.time+5.2; if(!already) G.dropT0=G.time;
-      chokeBuf('play');                           /* 스팅어 컷 → 드랍만 깨끗하게 */
       if(!already){ dropTheBassFX(); playBuf('drop_voice',0.95,1,{group:'voice'}); }
       T3.punch=1.4; T3.burst=1.6; G.shake=Math.max(G.shake,10);
       for(let i=0;i<30;i++) G.confetti.push({x:rand(0,SW),y:rand(-SH*0.15,0),vx:rand(-60,60),vy:rand(80,220),rot:rand(0,6.3),vr:rand(-5,5),c:['#F2C14E','#E8431F','#FFF6E0'][i%3],s:rand(5,10)});
@@ -1306,6 +1305,31 @@ function ledTxt(str,x,y,size,align='left'){
   ctx.shadowBlur=0; ctx.fillStyle='rgba(255,248,230,0.9)'; ctx.fillText(str,x,y);
   ctx.restore();
 }
+/* SVG 타이포와 같은 무드의 코믹 레터링 — 글자별 지터 + 두꺼운 아웃라인 */
+const F_COMIC="'Bangers', 'Arial Black', sans-serif";
+function comicText(str,x,y,size,fill,outline='#241505',align='center'){
+  ctx.save();
+  ctx.font=`${size}px ${F_COMIC}`;
+  ctx.textBaseline='middle'; ctx.textAlign='left';
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  const chs=[...str];
+  const ws=chs.map(ch=>ctx.measureText(ch).width);
+  const total=ws.reduce((a,b)=>a+b,0)+(chs.length-1)*size*0.03;
+  let cx0=align==='center'?x-total/2:align==='right'?x-total:x;
+  const lw=size*0.14;
+  chs.forEach((ch,i)=>{
+    const jy=((i*7)%3-1)*size*0.055, ja=(((i*13)%5)-2)*0.028;
+    ctx.save(); ctx.translate(cx0+ws[i]/2,y+jy); ctx.rotate(ja);
+    ctx.strokeStyle='rgba(20,10,2,0.55)'; ctx.lineWidth=lw;
+    ctx.strokeText(ch,-ws[i]/2+size*0.045,size*0.05);   /* 오프셋 섀도 */
+    ctx.strokeStyle=outline; ctx.lineWidth=lw;
+    ctx.strokeText(ch,-ws[i]/2,0);
+    ctx.fillStyle=fill; ctx.fillText(ch,-ws[i]/2,0);
+    ctx.restore();
+    cx0+=ws[i]+size*0.03;
+  });
+  ctx.restore();
+}
 function steamIcon(c,x,y,s,color,lw,flavor){
   c.save();
   c.strokeStyle=color; c.fillStyle=color; c.lineWidth=lw||s*0.22; c.lineCap='round'; c.lineJoin='round';
@@ -1756,7 +1780,7 @@ function drawGame(){
   }
 
   /* ---- section label (right of the mascot lane) ---- */
-  txtO(FL.label,SW*0.63,R.labelY+SH*0.012,SW*0.084,FL.color==='#8a5432'?'#c58c5a':'#fff','rgba(20,10,0,0.85)',SW*0.018);
+  comicText(FL.label,SW*0.63,R.labelY+SH*0.012,SW*0.088,FL.color==='#8a5432'?'#c58c5a':FL.color);
 
   /* ---- rail ---- */
   ctx.fillStyle='rgba(10,6,2,0.35)';
@@ -1796,7 +1820,7 @@ function drawGame(){
     ctx.save(); ctx.translate(SW*0.5,R.comboY); ctx.scale(pop,pop);
     if(tier>=3) ctx.rotate(Math.sin(G.time*9)*0.03);
     if(tier>=2){ ctx.shadowColor=tier>=3?col:'#ff9d1e'; ctx.shadowBlur=SW*(0.02+tier*0.008); }
-    txtO(`COMBO ×${c2}`,0,0,SW*(0.07+tier*0.007),col,'rgba(20,10,0,0.8)',SW*0.015);
+    comicText(`COMBO ×${c2}`,0,0,SW*(0.074+tier*0.008),col);
     ctx.restore();
     if(tier>=2){                                    /* 콤보 주위 별 오라 */
       const nS=2+tier*2;
@@ -1812,7 +1836,7 @@ function drawGame(){
   if(G.fever && !G.eat){
     const bl=0.72+0.28*Math.sin(G.time*10);
     ctx.globalAlpha=bl;
-    if(G.time>=G.drop) txtO('🔥 FEVER ×2 🔥',SW*0.5,R.comboY+SW*0.082,SW*0.052,'#ffe95e','#a33000',SW*0.013);
+    if(G.time>=G.drop) comicText('FEVER ×2',SW*0.5,R.comboY+SW*0.082,SW*0.056,'#ffe95e','#7a2800');
     ctx.globalAlpha=1;
   }
 
@@ -1849,7 +1873,7 @@ function drawGame(){
     }else{                                          /* running multiplier */
       ctx.translate(SW*0.5,R.comboY+SW*0.082);
       ctx.scale(1+beat*0.12,1+beat*0.12);
-      txtO('THE DROP ×3',0,0,SW*0.05,'#ffe95e','#7a1400',SW*0.012);
+      comicText('THE DROP ×3',0,0,SW*0.054,'#ffe95e','#7a1400');
     }
     ctx.restore();
   }
@@ -1869,8 +1893,10 @@ function drawGame(){
       const sc=cfg[2]*(1+0.4*Math.sin(Math.min(t*10,Math.PI)));
       ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
       ctx.translate(f.x,f.y-t*14); ctx.scale(sc,sc);
-      if(!(f.j==='miss'&&drawArt('t_kidding',0,0,SW*0.4)))
-        txtO(cfg[0],0,0,SW*0.054,cfg[1],'rgba(20,10,0,0.85)',SW*0.013);
+      if(!(f.j==='miss'&&drawArt('t_kidding',0,0,SW*0.4))){
+        const jc={perfect:'#FFF6D6',good:'#D9EFC0',bad:'#CFC8BE',miss:'#FF6B5A'}[f.j];
+        comicText(cfg[0],0,0,SW*0.058,jc);
+      }
       ctx.restore();
     }else if(f.kind==='ring'){
       const r_=SW*(f.big?0.062:0.048)+t*SW*0.45*(f.pow||1);
@@ -2249,7 +2275,7 @@ function drawAttract(){
   });
 
   if(Math.sin(G.time*5)>-0.3)
-    txtO('◉ GAME START ◉',SW/2,SH*0.83,SW*0.06,'#ff3b1e','#2a0500',SW*0.014);
+    comicText('GAME START',SW/2,SH*0.83,SW*0.07,'#ff4a2a');
   txt('탭 또는 아무 키나 눌러 시작!',SW/2,SH*0.878,SW*0.03,'rgba(255,255,255,0.8)');
   if(G.best>0){ ledTxt(`BEST ${String(G.best).padStart(7,'0')}`,SW/2,SH*0.92,SW*0.028,'center'); }
   txt('DJ Ramyun by 808hertz®',SW/2,SH*0.962,SW*0.026,'rgba(255,255,255,0.45)','center',F_ARCADE,'400');
