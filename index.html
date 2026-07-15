@@ -1068,19 +1068,19 @@ function setLED(text){
    ========================================================= */
 const CHIBI={
   trav: {skin:0x8A5A3B, cloth:0x6E5636, hair:'braids', hairC:0x1B1410, neck:'medallion'},
-  carti:{skin:0x6E4630, cloth:0x141418, hair:'shag',   hairC:0x0E0E10, neck:'double'},
+  carti:{skin:0x6E4630, cloth:0x141418, hair:'shag',   hairC:0x0E0E10, neck:'double', shades:'slim', grill:'sil'},
   jay:  {skin:0x7A4E33, cloth:0x2E3A4E, hair:'cap',    hairC:0x1E2E4E, neck:'cuban', beard:true},
   ye:   {skin:0x7E5236, cloth:0x8A5A2A, hair:'buzz',   hairC:0x181210, shades:'shutter'},
-  bey:  {skin:0xB07B4E, cloth:0xE8C25A, hair:'waves',  hairC:0xD9A44A, hoops:true, neck:'choker'},
+  bey:  {skin:0xB07B4E, cloth:0xE8C25A, hair:'waves',  hairC:0xD9A44A, hoops:true, neck:'choker', bling:true},
   phril:{skin:0x8A5A3B, cloth:0xF0EAE0, hair:'ranger', hairC:0x6E4C2E, neck:'beads'},
-  snoop:{skin:0x6E4630, cloth:0x4A3E8C, hair:'pony',   hairC:0x171310, shades:'slim'},
+  snoop:{skin:0x6E4630, cloth:0x4A3E8C, hair:'pony',   hairC:0x171310, shades:'slim', fur:0xB79AE0},
   nicki:{skin:0x9A6A44, cloth:0xF48FB1, hair:'waves',  hairC:0xF06CA8, hoops:true, neck:'heart'},
   nigo: {skin:0xF2C9A0, cloth:0x4E5B3A, hair:'flat',   hairC:0x14100C, neck:'bowl', beard:'goatee'},
-  lisa: {skin:0xF5D3AE, cloth:0xF2E14E, hair:'bangs',  hairC:0x241A12, hoops:true, neck:'choker', neckC:0xE8ECF2},
+  lisa: {skin:0xF5D3AE, cloth:0xF2E14E, hair:'bangs',  hairC:0x241A12, hoops:true, neck:'choker', neckC:0xE8ECF2, bling:true},
   psy:  {skin:0xEDC49C, cloth:0x22262E, hair:'buzz',   hairC:0x14100C, shades:'slim'},
   em:   {skin:0xF7E3D4, cloth:0xEDEDED, hair:'buzz',   hairC:0xD8B24A, neck:'dogtag'},
   billie:{skin:0xF6E2DA,cloth:0x9CCB3B, hair:'shag',   hairC:0x1E5A48},
-  posty:{skin:0xF2D8C4, cloth:0x777C82, hair:'shag',   hairC:0x6B4B32, beard:true, neck:'double', neckC:0xF2C14E},
+  posty:{skin:0xF2D8C4, cloth:0x777C82, hair:'shag',   hairC:0x6B4B32, beard:true, neck:'double', neckC:0xF2C14E, grill:'gold'},
   tay:  {skin:0xF8E6D8, cloth:0x7FB3E8, hair:'bangs',  hairC:0xE8C86A, hoops:true},
 };
 let PEND_MAT=null;
@@ -1105,38 +1105,41 @@ function mkChibi(type){
   const dark=M(0x14100C,0.5);
   const add=(m,x,y,z)=>{ m.position.set(x,y,z); g.add(m); return m; };
   /* streetwear body — 2등신 */
-  const body=add(new THREE.Mesh(new THREE.SphereGeometry(0.21,18,12),M(P.cloth,0.72)),0,0.24,0);
+  const bodyMat=P.bling
+    ?new THREE.MeshStandardMaterial({color:P.cloth,metalness:0.7,roughness:0.26,emissive:P.cloth,emissiveIntensity:0.14})
+    :M(P.cloth,0.72);
+  const body=add(new THREE.Mesh(new THREE.SphereGeometry(0.21,18,12),bodyMat),0,0.24,0);
   body.scale.set(1,1.15,0.9); body.castShadow=true;
   for(const s of[-1,1]) add(new THREE.Mesh(new THREE.SphereGeometry(0.06,8,6),M(0xF5F2EA,0.5)),s*0.09,0.035,0.07);  /* kicks */
   const head=add(new THREE.Mesh(new THREE.SphereGeometry(0.3,24,18),M(P.skin,0.55)),0,0.7,0);
   head.castShadow=true;
   /* face */
   if(!P.shades) for(const s of[-1,1]){
-    add(new THREE.Mesh(new THREE.SphereGeometry(0.038,10,8),dark),s*0.115,0.73,0.265);
-    add(new THREE.Mesh(new THREE.SphereGeometry(0.013,6,5),M(0xffffff,0.25)),s*0.115+0.015,0.747,0.293);
+    add(new THREE.Mesh(new THREE.SphereGeometry(0.043,10,8),dark),s*0.115,0.73,0.268);
+    add(new THREE.Mesh(new THREE.SphereGeometry(0.015,6,5),M(0xffffff,0.25)),s*0.115+0.016,0.75,0.3);
   }
   const mo=add(new THREE.Mesh(new THREE.SphereGeometry(0.03,8,6),M(0x5E2A20,0.6)),0,0.61,0.283);
   mo.scale.set(1.5,0.7,0.5);
   /* hair / hats */
   const H=M(P.hairC,0.78);
   if(P.hair==='cap'){
-    add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.48),H),0,0.72,0);
+    add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.44),H),0,0.72,-0.015);
     const br=add(new THREE.Mesh(new THREE.BoxGeometry(0.32,0.035,0.2),H),0,0.855,0.28);
     br.rotation.x=0.12;
   }else if(P.hair==='buzz'){
     const b=add(new THREE.Mesh(new THREE.SphereGeometry(0.305,20,10,0,Math.PI*2,0,Math.PI*0.45),H),0,0.72,0);
     b.scale.y=0.8;
   }else if(P.hair==='shag'){
-    add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.52),H),0,0.72,0);
-    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2;
+    add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.45),H),0,0.72,-0.02);
+    for(let i=0;i<6;i++){ const a=Math.PI*0.75+(i/5)*Math.PI*1.5;   /* 옆·뒤만 — 얼굴은 비워둔다 */
       add(new THREE.Mesh(new THREE.SphereGeometry(0.07,8,6),H),Math.cos(a)*0.27,0.62,Math.sin(a)*0.27); }
   }else if(P.hair==='braids'){
-    add(new THREE.Mesh(new THREE.SphereGeometry(0.31,20,10,0,Math.PI*2,0,Math.PI*0.5),H),0,0.72,0);
+    add(new THREE.Mesh(new THREE.SphereGeometry(0.31,20,10,0,Math.PI*2,0,Math.PI*0.44),H),0,0.72,-0.015);
     for(let i=0;i<7;i++){ const a=(i/7)*Math.PI*1.5+Math.PI*0.75;   /* around back & sides */
       const b=add(new THREE.Mesh(new THREE.SphereGeometry(0.06,8,6),H),Math.cos(a)*0.27,0.6,Math.sin(a)*0.27);
       b.scale.set(0.55,2.1,0.55); }
   }else if(P.hair==='waves'){
-    add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.52),H),0,0.72,0);
+    add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.45),H),0,0.72,-0.02);
     for(const s of[-1,1]){ const w=add(new THREE.Mesh(new THREE.SphereGeometry(0.11,10,8),H),s*0.27,0.47,-0.03);
       w.scale.set(0.6,2.0,0.7); }
     const bk=add(new THREE.Mesh(new THREE.SphereGeometry(0.16,12,8),H),0,0.5,-0.22);
@@ -1145,7 +1148,7 @@ function mkChibi(type){
     const f=add(new THREE.Mesh(new THREE.SphereGeometry(0.31,20,10,0,Math.PI*2,0,Math.PI*0.44),H),0,0.73,-0.01);
     f.scale.y=0.8;
   }else if(P.hair==='bangs'){
-    add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.52),H),0,0.71,0.005);
+    add(new THREE.Mesh(new THREE.SphereGeometry(0.315,20,10,0,Math.PI*2,0,Math.PI*0.45),H),0,0.715,-0.015);
     const fr=add(new THREE.Mesh(new THREE.SphereGeometry(0.16,12,8),H),0,0.85,0.2);
     fr.scale.set(1.15,0.42,0.6);
     for(const s of[-1,1]){ const w=add(new THREE.Mesh(new THREE.SphereGeometry(0.1,10,8),H),s*0.26,0.42,-0.03);
@@ -1154,7 +1157,7 @@ function mkChibi(type){
     add(new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.45,0.035,22),H),0,0.87,0);
     add(new THREE.Mesh(new THREE.SphereGeometry(0.23,16,10,0,Math.PI*2,0,Math.PI*0.55),H),0,0.87,0);
   }else if(P.hair==='pony'){
-    const c=add(new THREE.Mesh(new THREE.SphereGeometry(0.31,20,10,0,Math.PI*2,0,Math.PI*0.46),H),0,0.72,0);
+    const c=add(new THREE.Mesh(new THREE.SphereGeometry(0.31,20,10,0,Math.PI*2,0,Math.PI*0.44),H),0,0.72,-0.01);
     c.scale.y=0.85;
     for(const s of[-1,1]){ const b=add(new THREE.Mesh(new THREE.SphereGeometry(0.055,8,6),H),s*0.26,0.52,-0.08);
       b.scale.set(0.6,2.4,0.6); b.rotation.z=-s*0.15; }
@@ -1162,6 +1165,17 @@ function mkChibi(type){
   /* ice & extras */
   /* 목걸이 — 전원 제각각. 서브컬처는 개성이다 */
   const SIL=new THREE.MeshStandardMaterial({color:0xE8ECF2,metalness:0.9,roughness:0.2});
+  if(P.grill){                                     /* 반짝이는 그릴 */
+    const gr=add(new THREE.Mesh(new THREE.BoxGeometry(0.052,0.016,0.018),P.grill==='gold'?GOLD:SIL),0,0.604,0.292);
+    gr.rotation.x=0.1;
+  }
+  if(P.fur){                                       /* 퍼 칼라 — 90s 플렉스 */
+    const fm=M(P.fur,0.95);
+    for(let i=0;i<10;i++){ const a=i/10*Math.PI*2;
+      const f=add(new THREE.Mesh(new THREE.SphereGeometry(0.052,8,6),fm),
+        Math.cos(a)*0.165,0.452+((i*7)%3)*0.006,Math.sin(a)*0.15+0.02);
+      f.scale.set(1,0.8,1); }
+  }
   if(P.neck==='medallion'){                        /* 대형 DJ Ramyun 다이아 메달 — trav 전용 플렉스 */
     const ch=add(new THREE.Mesh(new THREE.TorusGeometry(0.16,0.018,8,22),GOLD),0,0.42,0.06);
     ch.rotation.x=1.22;
