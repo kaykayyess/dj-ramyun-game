@@ -634,7 +634,7 @@ function finishOrder(order){
     if(gotHeart) G.lives=Math.min(3,G.lives+1);
     if(!order.counts.jjaguri) slurpFX();          /* 드랍이 대신 울린다 */
     if(gotHeart) heartFX();
-    G.eat={t0:G.time,customer:order.customer,bonus:b,perfect:true,heart:gotHeart,flavor:domOf(order),spice:domOf(order)==='buldak'?(order.counts.buldak||1):0};
+    G.eat={t0:G.time,customer:order.customer,bonus:b,perfect:true,heart:gotHeart,flavor:domOf(order),spice:domOf(order)==='buldak'?(order.counts.buldak||1):0,serv:order.counts[domOf(order)]||1};
     for(let i=0;i<22;i++) G.confetti.push({x:rand(0,SW),y:rand(-SH*0.1,0),vx:rand(-30,30),vy:rand(60,160),rot:rand(0,6.3),vr:rand(-4,4),c:FLAVORS[SEQ[i%4]].color,s:rand(4,9)});
     /* 짜파구리 퍼펙트 = THE DROP!! turntable spins up, everything ×3 */
     if(order.counts.jjaguri && !G.dying){
@@ -650,7 +650,7 @@ function finishOrder(order){
     const b=Math.round(400*diffMult());
     G.score+=b; G.bowls++;
     slurpFX();
-    G.eat={t0:G.time,customer:order.customer,bonus:b,perfect:false,heart:false,flavor:domOf(order),spice:domOf(order)==='buldak'?(order.counts.buldak||1):0};
+    G.eat={t0:G.time,customer:order.customer,bonus:b,perfect:false,heart:false,flavor:domOf(order),spice:domOf(order)==='buldak'?(order.counts.buldak||1):0,serv:order.counts[domOf(order)]||1};
   }else{
     G.pStreak=0;
     G.toasts.push({kind:'angry',t0:G.time,order});
@@ -2244,9 +2244,12 @@ function drawEat(){
   const bw=SW*0.15, bx=SW*0.53, by=cy+SH*0.035;
   drawMiniBowl(bx,by,bw,G.eat.flavor,G.time,-0.12+Math.sin(t*6)*0.03);
 
-  const sp=G.eat.spice||0;
-  const jit=sp>=3?Math.sin(G.time*34)*R*0.045:0;      /* 매워서 덜덜 */
-  drawCust(fx+jit,fy,R,G.eat.customer,G.time,happy?(G.eat.perfect?'happy':'yum'):'slurp');
+  const sp=G.eat.spice||0, srv=G.eat.serv||1;
+  const mukbang=!sp&&srv>=3;                          /* 먹방러 모드 */
+  const full=!sp&&srv>=4;                             /* 배 터지기 직전 */
+  const jit=sp>=2?Math.sin(G.time*34)*R*0.045:0;      /* 불닭 2개부터 덜덜 */
+  const R2=full&&happy?R*1.16:mukbang?R*1.06:R;      /* 많이 먹으면 얼굴도 빵빵 */
+  drawCust(fx+jit,fy,R2,G.eat.customer,G.time,happy?(G.eat.perfect?'happy':'yum'):'slurp');
   /* ---- 불닭 매움 리액션: 인분수 = 고통 레벨 ㅋㅋ ---- */
   if(sp>0){
     const redA=0.1+sp*0.09+(happy?0.1:0);             /* 얼굴이 점점 시뻘게진다 */
@@ -2259,12 +2262,12 @@ function drawEat(){
       ctx.fillStyle=`rgba(140,208,236,${0.9*(1-ph)})`;
       ctx.beginPath(); ctx.ellipse(sxx,syy,R*0.05,R*0.08,0,0,7); ctx.fill();
     }
-    if(sp>=2){                                        /* 2개+: 눈물 찔끔 */
+    if(sp>=1){                                        /* 1개부터 눈물 찔끔 */
       ctx.fillStyle='rgba(140,208,236,0.8)';
       for(const sg of[-1,1]){ const tp=(t*2.2+ (sg+1)*0.25)%0.5;
         ctx.beginPath(); ctx.ellipse(fx+jit+sg*R*0.38,fy+R*0.12+tp*R*0.9,R*0.045,R*(0.08+tp*0.12),0,0,7); ctx.fill(); }
     }
-    if(sp>=3){                                        /* 3개+: 입에서 불이 나온다 */
+    if(sp>=2){                                        /* 2개부터 입에서 불이 나온다 */
       for(let i=0;i<3;i++){ const fp=(t*3.2+i*0.33)%1;
         const fx2=fx+jit-R*0.3+(i-1)*R*0.14+Math.sin(fp*9)*R*0.03, fy2=fy+R*0.52-fp*R*0.85;
         ctx.fillStyle=`rgba(255,${90+i*50},18,${(1-fp)*0.85})`;
@@ -2273,7 +2276,7 @@ function drawEat(){
         ctx.closePath(); ctx.fill();
       }
     }
-    if(sp>=4){                                        /* 4개: 영혼 이탈 👼 */
+    if(sp>=3){                                        /* 3개부터 영혼 이탈 👼 */
       const gp=(t*0.45)%1;
       ctx.save(); ctx.globalAlpha=0.6*(1-gp);
       const gx=fx+R*0.95+Math.sin(t*4)*R*0.12, gy=fy-R*0.5-gp*R*1.6;
@@ -2289,11 +2292,46 @@ function drawEat(){
       ctx.restore();
       G.shake=Math.max(G.shake,1.4);                  /* 화면도 얼얼 */
     }
+    if(sp>=4){                                        /* 4개: 응급상황 🚒 */
+      const p4=0.5+0.5*Math.sin(G.time*9);
+      ctx.strokeStyle=`rgba(255,40,20,${0.25+0.3*p4})`;
+      ctx.lineWidth=SW*0.012*p4+2;
+      ctx.strokeRect(ctx.lineWidth/2,ctx.lineWidth/2,SW-ctx.lineWidth,SH-ctx.lineWidth);
+      ctx.font=`${SW*0.06}px ${F_SANS}`; ctx.textAlign='center';
+      ctx.fillText('🚒',fx-R*1.3+Math.sin(G.time*6)*R*0.15,fy-R*1.1);
+      ctx.fillText('🧯',fx+R*1.4,fy+R*0.4+Math.sin(G.time*7)*R*0.1);
+      G.shake=Math.max(G.shake,2.2);
+    }
+  }
+  /* ---- 먹방러 모드 (3인분+): 볼 빵빵 + LIVE 방송 ㅋㅋ ---- */
+  if(mukbang){
+    ctx.fillStyle=CUST_SKIN[G.eat.customer]||'#8A5A3B';
+    for(const sg of[-1,1]){ ctx.beginPath();
+      ctx.arc(fx+jit+sg*R*0.62,fy+R*0.18,R*0.3+Math.sin(t*9)*R*0.02,0,7); ctx.fill(); }
+    ctx.fillStyle='rgba(255,118,108,0.5)';
+    for(const sg of[-1,1]){ ctx.beginPath(); ctx.ellipse(fx+jit+sg*R*0.62,fy+R*0.2,R*0.17,R*0.11,0,0,7); ctx.fill(); }
+    ctx.fillStyle='rgba(12,8,4,0.85)';
+    rr(ctx,fx+R*0.95,fy-R*1.25,R*1.45,R*0.42,R*0.12); ctx.fill();
+    ctx.fillStyle=Math.sin(G.time*6)>0?'#ff2e2e':'#801010';
+    ctx.beginPath(); ctx.arc(fx+R*1.18,fy-R*1.04,R*0.07,0,7); ctx.fill();
+    txt('LIVE 먹방',fx+R*1.72,fy-R*1.03,R*0.24,'#fff','center',F_SANS,'900');
+  }
+  /* ---- 4인분 완식 (불닭 제외): 배불러 죽음 ㅋㅋ ---- */
+  if(full&&happy){
+    const bp=Math.min(1,ht/0.9);
+    ctx.save(); ctx.globalAlpha=1-bp;
+    ctx.font=`${SW*0.05}px ${F_SANS}`; ctx.textAlign='center';
+    ctx.fillText('꺼어어억~~',fx+R*0.3,fy-R*1.5-bp*R*0.9);
+    ctx.restore();
+    comicText('완식!!',fx-R*1.2,fy-R*1.1,SW*0.05,'#F5E056');
+    ctx.fillStyle='rgba(140,208,236,0.85)';
+    ctx.beginPath(); ctx.ellipse(fx+R*0.5,fy-R*0.55,R*0.06,R*0.1,0.3,0,7); ctx.fill();
+    G.shake=Math.max(G.shake,0.8);
   }
 
   if(!happy){
     /* ---- chopsticks lift a FAT bundle of noodles into the mouth ---- */
-    const c=0.72, p=(t%c)/c;
+    const c=mukbang?0.52:0.72, p=(t%c)/c;           /* 먹방러는 흡입이 빠르다 */
     const grow=easeOut(clamp(p/0.26,0,1));           /* pick up from the bowl */
     const liftP=easeOut(clamp((p-0.26)/0.36,0,1));   /* carry to the mouth   */
     const eatP=easeIn(clamp((p-0.62)/0.34,0,1));     /* whole bite goes in   */
@@ -2311,7 +2349,7 @@ function drawEat(){
       for(let i=0;i<10;i++){
         const sx=(i-4.5)*R*0.038;
         const li=L*(0.72+((i*37)%10)/10*0.38);
-        ctx.strokeStyle=NC[i%2]; ctx.lineWidth=R*0.045;
+        ctx.strokeStyle=NC[i%2]; ctx.lineWidth=R*(mukbang?0.062:0.045);
         ctx.beginPath();
         for(let k=0;k<=14;k++){
           const u=k/14;
@@ -2347,7 +2385,7 @@ function drawEat(){
     /* ---- quick reaction pop, then out of the way ---- */
     const pop=easeOut(ht/0.16);
     ctx.save(); ctx.translate(SW*0.71,cy-SH*0.15); ctx.scale(pop,pop); ctx.rotate(Math.sin(ht*5)*0.04);
-    const spq=sp>=4?'저세상 맛이야... 👼':sp>=3?'무.. 물!!! 물 줘!!! 🥵':sp>=2?'혀가 사라졌어!! 🔥':sp>=1?'스읍— 맵칼하네 😤':null;
+    const spq=sp>=4?'일일구!!! 소방차 불러!!! 🚒':sp>=3?'저세상이 보인다... 👼':sp>=2?'매워서 죽을 것 같아!!! 🥵':sp>=1?'혀가 얼얼얼—!! 🔥':full?'배 터진다아아... 꺼억 🤰':mukbang?'쩝쩝박사 인정?? 🎥':null;
     txtO(spq||CUST_QUOTE[G.eat.customer]||'후루룩~ 최고!',0,0,SW*0.037,'#fff','rgba(20,10,0,0.85)',SW*0.008);
     ctx.restore();
     if(G.eat.perfect){
