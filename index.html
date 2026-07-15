@@ -582,7 +582,7 @@ function finishOrder(order){
 /* ---------- flow update ---------- */
 function update(dt){
   updateFX(dt);
-  if(G.state!=='game') return;
+  if(G.state!=='game'){ if(A.bgm) bgmStop(); return; }
   schedulerUpdate();
   // keep the conveyor stocked
   if(G.cursorT - pnow() < 10) pushOrder();
