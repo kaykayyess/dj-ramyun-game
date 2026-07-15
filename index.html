@@ -84,12 +84,14 @@ const I18N={
   fever:'🔥 FEVER ×2 — 점수 두 배! 🔥',
   open:'영업 시작!!',
   first_bowl:'🍜 첫 그릇 완성! 맛집 소문내러 갑시다~!!',
-  tut_play:'▶ PLAY로 끓이기 완성 — 손님에게 서빙!',
-  tut_tap:'박자에 맞춰 {0} 투하! 원판이 점선 원에 닿는 순간이에요',
-  tut_practice:'첫 손님은 연습 손님 — 부담 없이 끓여봐요! (하트 안 닳음)',
-  tut_retry:'아쉬워요! 다시 한 번 — 천천히 박자에 맞춰봐요 🙂',
+  tut_play:'▶ PLAY 눌러 서빙!',
+  tut_tap:'원판이 ◯에 닿는 순간 {0} 탭!',
+  tut_practice:'연습 손님 — 하트 안 닳아요!',
+  tut_retry:'괜찮아요! 다시 한 번!',
   hype1:'🍜 맛집 소문이 돌기 시작했다...', hype2:'웅성웅성... 소문 듣고 손님들이 몰려온다!!',
   hype3:'🔥 원판 맛집 등극!! 줄이 끝이 없다!!', murmur:'웅성웅성...',
+  hq1:'여기가 그 원판 맛집??', hq2:'회사 반차 내고 왔어요', hq3:'3시간 줄 섰다 ㄹㅇ...',
+  hq4:'별점 5.0 실화냐', hq5:'재료 소진 전에 도착!!', hq6:'할머니가 가보라 했음',
   tut_now:'지금이야!!',
   ord_item:'{0} {1}인분', ord_item_guri:'{0} {1}개', ord_end:' 주세요~!', ord_none:'라면 1인분',
   sad_cust:'손님이 실망했다… 💦',
@@ -118,12 +120,14 @@ const I18N={
   fever:'🔥 FEVER ×2 — DOUBLE POINTS! 🔥',
   open:'OPEN FOR BUSINESS!!',
   first_bowl:'🍜 First bowl served! The word is spreading~!!',
-  tut_play:'▶ Hit PLAY to finish cooking — serve it up!',
-  tut_tap:'Drop the {0} on the beat! Tap when the disc hits the dotted ring',
-  tut_practice:'Your first customer is just practice — no pressure! (no heart loss)',
-  tut_retry:'So close! One more time — just follow the beat 🙂',
+  tut_play:'▶ Hit PLAY to serve!',
+  tut_tap:'Tap {0} when the disc hits the ◯!',
+  tut_practice:'Practice run — no heart loss!',
+  tut_retry:'No worries — one more try!',
   hype1:'🍜 Word about this spot is spreading...', hype2:'The hype is real — customers flooding in!!',
   hype3:'🔥 CERTIFIED HOT SPOT!! The line never ends!!', murmur:'chatter chatter...',
+  hq1:'Is THIS the famous spot??', hq2:'I took a half-day off for this', hq3:'Been in line 3 hours fr...',
+  hq4:'5.0 stars?? no way', hq5:'Made it before sellout!!', hq6:'My grandma sent me here',
   tut_now:'NOW!!',
   ord_item:'{1}× {0}', ord_item_guri:'{1}× {0}', ord_end:', please!', ord_none:'1 ramyun',
   sad_cust:'The customer is disappointed… 💦',
@@ -150,9 +154,11 @@ const I18N={
  'ja':{
   fl_ramyun:'ラーメン', fl_buldak:'ブルダック', fl_jjapa:'チャパゲティ', fl_neogury:'ノグリ',
   fl_jjaguri:'チャパグリ', fever:'🔥 FEVER ×2 — スコア2倍! 🔥', open:'営業スタート!!', first_bowl:'🍜 最初の一杯完成!バズらせに行くぞ~!!',
-  tut_play:'▶ PLAYで調理完成 — お客さんにサーブ!', tut_tap:'ビートに乗って{0}を投下!ディスクが点線の円に重なる瞬間だ!', tut_practice:'最初のお客さんは練習台!気軽に作ろう(ハート減らない)', tut_retry:'おしい!もう一回 — ビートに合わせてね 🙂',
+  tut_play:'▶ PLAYでサーブ!', tut_tap:'ディスクが◯に重なったら{0}をタップ!', tut_practice:'練習だよ — ハート減らない!', tut_retry:'ドンマイ!もう一回!',
   hype1:'🍜 うわさが広まりはじめた…', hype2:'ざわざわ…行列ができてきた!!',
-  hype3:'🔥 伝説の名店に認定!!行列が止まらない!!', murmur:'ざわざわ…', tut_now:'今だ!!',
+  hype3:'🔥 伝説の名店に認定!!行列が止まらない!!', murmur:'ざわざわ…',
+  hq1:'ここが例の名店…?', hq2:'半休取って来ました', hq3:'3時間並んだガチ…',
+  hq4:'星5.0ってマジ?', hq5:'売り切れ前に到着!!', hq6:'ばあちゃんのおすすめ', tut_now:'今だ!!',
   ord_item:'{0} {1}人前', ord_item_guri:'{0} {1}セット', ord_end:'ください~!', ord_none:'ラーメン1人前',
   sad_cust:'お客さんがガッカリ… 💦', spq1:'舌がビリビリビリ—!! 🔥', spq2:'辛すぎて死ぬぅぅ!!! 🥵', spq3:'あの世が見える… 👼',
   spq4:'死亡…天国で会おう 👼', eat_full:'お腹はち切れるぅ…ゲフッ 🤰', eat_mukbang:'モッパン博士認定?? 🎥', eat_default:'ズルズル~ウマすぎ!!',
@@ -170,9 +176,11 @@ const I18N={
  'zh-Hant':{
   fl_ramyun:'泡麵', fl_buldak:'火雞麵', fl_jjapa:'炸醬麵', fl_neogury:'浣熊麵',
   fl_jjaguri:'炸醬浣熊麵', fever:'🔥 FEVER ×2 — 分數翻倍!🔥', open:'正式開張!!', first_bowl:'🍜 第一碗完成!小店要爆紅啦~!!',
-  tut_play:'▶ 按 PLAY 完成烹煮 — 上菜囉!', tut_tap:'跟著節拍丟出{0}!圓盤碰到虛線圈那一刻就點!', tut_practice:'第一位是練習客人 — 輕鬆煮就好!(不扣愛心)', tut_retry:'差一點!再一次 — 跟著節拍就好 🙂',
+  tut_play:'▶ 按 PLAY 上菜!', tut_tap:'圓盤碰到◯的瞬間點{0}!', tut_practice:'練習局 — 不扣愛心!', tut_retry:'沒關係!再一次!',
   hype1:'🍜 好味道的傳聞開始擴散…', hype2:'議論紛紛…客人聞香而來!!',
-  hype3:'🔥 正宗名店認證!!排隊排到看不到尾!!', murmur:'嘰嘰喳喳…', tut_now:'就是現在!!',
+  hype3:'🔥 正宗名店認證!!排隊排到看不到尾!!', murmur:'嘰嘰喳喳…',
+  hq1:'這就是那間名店??', hq2:'我請半天假來的', hq3:'真的排了3小時...',
+  hq4:'5.0星是真的假的', hq5:'趕在完售前到了!!', hq6:'阿嬤叫我來吃的', tut_now:'就是現在!!',
   ord_item:'{0} {1}人份', ord_item_guri:'{0} {1}份', ord_end:',麻煩囉~!', ord_none:'泡麵 1人份',
   sad_cust:'客人好失望… 💦', spq1:'舌頭麻掉啦—!!🔥', spq2:'超派!辣到快死了!!!🥵', spq3:'我看到阿祖了…👼',
   spq4:'已陣亡…天堂見 👼', eat_full:'肚子要爆啦啊啊…嗝 🤰', eat_mukbang:'吃播博士認證??🎥', eat_default:'呼嚕嚕~好吃到升天!',
@@ -190,9 +198,11 @@ const I18N={
  'zh-Hans':{
   fl_ramyun:'拉面', fl_buldak:'火鸡面', fl_jjapa:'炸酱面', fl_neogury:'浣熊面',
   fl_jjaguri:'浣熊炸酱面', fever:'🔥 FEVER ×2 — 分数翻倍!🔥', open:'开张营业!!', first_bowl:'🍜 第一碗出锅!这店要火了~!!',
-  tut_play:'▶ 按 PLAY 煮好出锅 — 端给客人!', tut_tap:'卡点投下{0}!圆盘碰到虚线圈的瞬间就点!', tut_practice:'第一位是练习客人 — 放心煮!(不掉爱心)', tut_retry:'就差一点!再来一次 — 跟着节拍走 🙂',
+  tut_play:'▶ 按 PLAY 上菜!', tut_tap:'圆盘碰到◯的瞬间点{0}!', tut_practice:'练习局 — 不掉爱心!', tut_retry:'没事!再来一次!',
   hype1:'🍜 这家店的口碑开始传开了…', hype2:'窃窃私语…客人闻讯赶来!!',
-  hype3:'🔥 火爆名店认证!!队伍根本排不完!!', murmur:'叽叽喳喳…', tut_now:'就是现在!!',
+  hype3:'🔥 火爆名店认证!!队伍根本排不完!!', murmur:'叽叽喳喳…',
+  hq1:'这就是那家网红店??', hq2:'我请了半天假来的', hq3:'真排了3小时...',
+  hq4:'5.0分是认真的吗', hq5:'赶在卖完前到了!!', hq6:'奶奶让我来吃的', tut_now:'就是现在!!',
   ord_item:'{0} {1}份', ord_item_guri:'{0} {1}碗', ord_end:',安排上~!', ord_none:'拉面 1份',
   sad_cust:'客人心态崩了… 💦', spq1:'舌头麻了麻了—!! 🔥', spq2:'要被辣死了啊!!! 🥵', spq3:'辣到升天,看见天堂了... 👼',
   spq4:'卒... 我们天堂见 👼', eat_full:'肚子要炸了啊啊... 嗝 🤰', eat_mukbang:'炫饭大师认证?? 🎥', eat_default:'哧溜哧溜~ 绝了!',
@@ -2361,6 +2371,25 @@ function drawGame(){
         ctx.font=`${SW*0.028}px ${F_SANS}`;
         ctx.fillText('❗',SW*0.085,SH*0.6-((G.time*0.5+0.25)%1)*SH*0.02); }
       ctx.restore();
+      /* 몰려든 손님이 한 마디씩 — 맛집 인증 드립 */
+      { const cyc=3.4, phq=(G.time%cyc)/cyc, idx=(G.time/cyc)|0;
+        if(phq<0.76){
+          const pop=easeOut(Math.min(1,phq/0.1))*(1-easeIn(Math.max(0,(phq-0.58)/0.18)));
+          const msg=i18n('hq'+(1+(idx*5+hype)%6));
+          const h=SH*0.032;
+          let fs=h*0.52; ctx.save(); ctx.globalAlpha=clamp(pop,0,1);
+          ctx.font=`800 ${fs}px ${F_SANS}`;
+          let tw=ctx.measureText(msg).width;
+          if(tw>SW*0.5){ fs*=SW*0.5/tw; tw=SW*0.5; }
+          const w=tw+h*0.9, bx=SW*0.045, by=SH*0.507;
+          ctx.translate(bx+w*0.2,by+h); ctx.scale(0.75+0.25*pop,0.75+0.25*pop); ctx.translate(-(bx+w*0.2),-(by+h));
+          ctx.fillStyle='#FBF3E2';
+          rr(ctx,bx,by,w,h,h*0.45); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(bx+w*0.2,by+h-1); ctx.lineTo(bx+w*0.14,by+h+SH*0.016); ctx.lineTo(bx+w*0.32,by+h-1); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle='#2A1B0C'; ctx.lineWidth=2; rr(ctx,bx,by,w,h,h*0.45); ctx.stroke();
+          txt(msg,bx+w/2,by+h/2+0.5,fs,'#3A2A1E','center',F_SANS,'800');
+          ctx.restore();
+        } }
     } }
   /* ---- toasts + slurp vignette (the queue itself is 3D now) ---- */
   drawToasts();
