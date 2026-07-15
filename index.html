@@ -481,8 +481,9 @@ function orderParams(no){
   if(no>=9){ mn=2; mx=3; }
   if(no>=13){ mn=2; mx=4; }
   /* 콤보가 쌓이면 몰아친다 — 미스로 콤보가 깨지면 다시 숨 돌릴 틈 */
-  const tap = (G.combo>=25||no>=24) ? 0.5 : 1;
-  return {bpm, secN, mn, mx, tap};
+  /* 반박자 노트 섞임 비율 — 주문이 쌓일수록, 콤보가 높을수록 서서히 */
+  const dbl = clamp((no-8)/18,0,0.55) + (G.combo>=25?0.25:G.combo>=15?0.12:0);
+  return {bpm, secN, mn, mx, dbl:clamp(dbl,0,0.85)};
 }
 function pushOrder(){
   const no=++G.orderCount;
@@ -507,13 +508,13 @@ function pushOrder(){
       const n=irand(1,2);                          /* 짜파구리 1개=짜파1+너1 · 2개=짜파2+너2 */
       order.counts[f]=n; order.sections.push({key:f,n});
       order.total+=n*2+1;
-      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:'jjapa',sec:f,time:t,order,bpm:p.bpm}); t+=spb*p.tap; }
-      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:'neogury',sec:f,time:t,order,bpm:p.bpm}); t+=spb*p.tap; }
+      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:'jjapa',sec:f,time:t,order,bpm:p.bpm}); t+=spb*(Math.random()<p.dbl?0.5:1); }
+      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:'neogury',sec:f,time:t,order,bpm:p.bpm}); t+=spb*(Math.random()<p.dbl?0.5:1); }
     }else{
       const n=irand(p.mn,p.mx);
       order.counts[f]=n; order.sections.push({key:f,n});
       order.total+=n+1;
-      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:f,sec:f,time:t,order,bpm:p.bpm}); t+=spb*p.tap; }
+      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:f,sec:f,time:t,order,bpm:p.bpm}); t+=spb*(Math.random()<p.dbl?0.5:1); }
     }
     G.notes.push({type:'play',flavor:f,sec:f,time:t,order,bpm:p.bpm}); t+=spb*gap;
   }
@@ -638,6 +639,7 @@ function finishOrder(order){
     if(order.counts.jjaguri && !G.dying){
       const already=G.time<G.drop;                /* 연속 드랍: 시간만 연장, 사운드 중첩 금지 */
       G.drop=G.time+5.2; if(!already) G.dropT0=G.time;
+      G.fx=G.fx.filter(f=>f.kind!=='drop');          /* 드랍 순간엔 THAT'S A BANGER 하나만 */
       /* 오디오는 짜파구리 전용 스팅어 하나만 — 드랍은 비주얼로 말한다 */
       T3.punch=1.4; T3.burst=1.6; G.shake=Math.max(G.shake,10);
       for(let i=0;i<30;i++) G.confetti.push({x:rand(0,SW),y:rand(-SH*0.15,0),vx:rand(-60,60),vy:rand(80,220),rot:rand(0,6.3),vr:rand(-5,5),c:['#F2C14E','#E8431F','#FFF6E0'][i%3],s:rand(5,10)});
@@ -2049,6 +2051,7 @@ function drawGame(){
       txt(f.text,SW*0.5,SH*0.315,SH*0.0155,'#ffe95e','center',F_SANS,'900');
       ctx.restore();
     }else if(f.kind==='drop'){
+      if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
       const sc=0.85+0.35*easeOut(t/0.3);            /* 천천히 차오르는 팝인 */
       ctx.save(); ctx.globalAlpha=Math.min(1,t/0.12)*(1-easeIn((t-0.15)/1.0));
       ctx.translate(SW*0.5,SH*0.313); ctx.scale(sc,sc);
