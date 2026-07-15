@@ -599,10 +599,12 @@ function finishOrder(order){
   if(order.miss===0){
     const b=Math.round(1000*diffMult())*(G.fever?2:1);
     G.score+=b; G.bowls++; G.perfectOrders++;
-    G.pStreak=(G.pStreak||0)+1;                    /* 연속 퍼펙트 콜아웃 */
-    if(G.pStreak===2) spawnFX({kind:'artslam',art:'t_ddrip',t0:G.time+0.5});
-    else if(G.pStreak===3) spawnFX({kind:'artslam',art:'t_triple',t0:G.time+0.5});
-    else if(G.pStreak===5) spawnFX({kind:'artslam',art:'t_dfire',t0:G.time+0.5});
+    G.pStreak=(G.pStreak||0)+1;                    /* 연속 퍼펙트 콜아웃 (드랍 순간엔 생략 — 한 번에 하나만) */
+    if(!(order.counts.jjaguri&&!G.dying)){
+      if(G.pStreak===2) spawnFX({kind:'artslam',art:'t_ddrip',t0:G.time+0.5});
+      else if(G.pStreak===3) spawnFX({kind:'artslam',art:'t_triple',t0:G.time+0.5});
+      else if(G.pStreak===5) spawnFX({kind:'artslam',art:'t_dfire',t0:G.time+0.5});
+    }
     const gotHeart = G.lives<3;
     if(gotHeart) G.lives=Math.min(3,G.lives+1);
     if(!order.counts.jjaguri) slurpFX();          /* 드랍이 대신 울린다 */
@@ -1082,7 +1084,7 @@ function init3D(){
       T3.plop=1; };
     T3.serveClear=()=>{ for(const n of T3.noodleTubes) n.userData.tgt=0.001;
       for(const k in T3.tops) T3.tops[k].userData.tgt=0.001; };
-    T3.setPotFor=(serv)=>{ T3.potTarget=[0.78,1.15,1.6,2.15][clamp(serv,1,4)-1]; }; /* 1인분 0.78 → 4인분 2.15 (기계를 덮는다) */
+    T3.setPotFor=(serv)=>{ T3.potTarget=[0.78,1.15,1.6,2.15][clamp(serv||1,1,4)-1]; }; /* 1인분 0.78 → 4인분 2.15 (기계를 덮는다) */
     /* attract screen shows an appetizing full pot */
     for(let i=0;i<9;i++) T3.noodleTubes[i].userData.tgt=1;
     T3.tops.ramyun.userData.tgt=1;
@@ -1103,12 +1105,14 @@ function init3D(){
       word('Ramyun',512,414,172);
     };
     const lbl=mkTex(1024,640,drawLbl);
+    let lblOfficial=false;
     if(document.fonts&&document.fonts.ready)   /* redraw once the Shrikhand webfont is in */
-      document.fonts.ready.then(()=>{ drawLbl(lbl.c.getContext('2d')); lbl.t.needsUpdate=true; });
+      document.fonts.ready.then(()=>{ if(!lblOfficial){ drawLbl(lbl.c.getContext('2d')); lbl.t.needsUpdate=true; } });
     { /* 공식 로고 PNG가 로드되면 냄비 스티커를 진짜 로고로 교체 */
       const lg=new Image();
-      lg.onload=()=>{ const g=lbl.c.getContext('2d'); g.clearRect(0,0,1024,640);
-        const sc=Math.min(1024/lg.width,640/lg.height)*1.32;
+      lg.onload=()=>{ lblOfficial=true;
+        const g=lbl.c.getContext('2d'); g.clearRect(0,0,1024,640);
+        const sc=Math.min(1024/lg.width,640/lg.height)*1.24;   /* 골드 링까지 온전히 */
         g.drawImage(lg,(1024-lg.width*sc)/2,(640-lg.height*sc)/2,lg.width*sc,lg.height*sc);
         lbl.t.needsUpdate=true; };
       lg.src='art/'+encodeURIComponent('DJ_Ramyun_logo_800x800.png');
@@ -2022,6 +2026,7 @@ function drawGame(){
         txtO('DROP!',0,0,SW*0.078,FLAVORS[f.flavor].color,'#140c04',SW*0.017);
       ctx.restore();
     }else if(f.kind==='artslam'){
+      if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
       const sc2=t<0.18?easeOut(t/0.18)*1.25:1.25-easeOut((t-0.18)/0.5)*0.25;
       ctx.save(); ctx.globalAlpha=clamp(1-easeIn((t-0.95)/0.45),0,1);
       ctx.translate(SW/2,SH*0.425); ctx.scale(sc2,sc2); ctx.rotate(Math.sin(t*9)*0.03);
@@ -2375,7 +2380,8 @@ function drawAttract(){
     comicText('GAME START',SW/2,SH*0.83,SW*0.07,'#ff4a2a');
   txt('탭 또는 아무 키나 눌러 시작!',SW/2,SH*0.878,SW*0.03,'rgba(255,255,255,0.8)');
   if(G.best>0){ ledTxt(`BEST ${String(G.best).padStart(7,'0')}`,SW/2,SH*0.92,SW*0.028,'center'); }
-  txt('DJ Ramyun by 808hertz® · Made by O KWON',SW/2,SH*0.962,SW*0.024,'rgba(255,255,255,0.45)','center',F_ARCADE,'400');
+  txt('DJ Ramyun by 808hertz®',SW/2,SH*0.958,SW*0.026,'rgba(255,255,255,0.45)','center',F_ARCADE,'400');
+  txt('game by O KWON',SW/2,SH*0.985,SW*0.015,'rgba(255,255,255,0.22)','center',F_SANS,'600');
   /* CRT scanlines */
   ctx.save(); ctx.globalAlpha=0.12; ctx.fillStyle='#000';
   for(let y=0;y<SH;y+=4) ctx.fillRect(0,y,SW,1.4);
@@ -2411,7 +2417,8 @@ function drawGameover(){
     txt(r_[1],SW*0.78,ry,SW*0.035,'#1c150c','right',F_SANS,'900');
   });
   SEQ.forEach((f,i)=>drawMascot(SW*(0.26+i*0.16),cy+ch*0.81,SH*0.04,f,'idle',G.time+i*0.3));
-  txt('DJ Ramyun by 808hertz® · Made by O KWON',SW/2,cy+ch*0.9,SW*0.029,'#5c3a00','center',F_SANS,'800');
+  txt('DJ Ramyun by 808hertz®',SW/2,cy+ch*0.9,SW*0.029,'#5c3a00','center',F_SANS,'800');
+  txt('game by O KWON',SW/2,cy+ch*0.95,SW*0.018,'rgba(92,58,0,0.5)','center',F_SANS,'700');
 
   const bw=SW*0.4,bh=SH*0.06,by=cy+ch+SH*0.028;
   const bx1=SW/2-bw-SW*0.02,bx2=SW/2+SW*0.02;
@@ -2445,7 +2452,8 @@ function shareScore(){
   g.font=`250px ${F_SANS}`; g.fillText('🍜',540,1040);
   g.font=`44px ${F_SANS}`; g.fillStyle='#5c3a00';
   g.fillText('DJ Ramyun by 808hertz®',540,1170);
-  g.fillText('Made by O KWON',540,1230);
+  g.font=`28px ${F_SANS}`; g.fillStyle='rgba(92,58,0,0.55)';
+  g.fillText('game by O KWON',540,1225);
   c.toBlob(async b=>{
     if(!b) return;
     const file=new File([b],'dj-ramyun-score.png',{type:'image/png'});
