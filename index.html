@@ -205,6 +205,33 @@ const snare=(t,v=0.3)=>{noiseHit({t,type:'bandpass',f0:1900,q:0.6,dur:0.12,v});t
 const clap =(t,v=0.25)=>{for(let i=0;i<3;i++)noiseHit({t:t+i*0.012,type:'bandpass',f0:1300,q:1.4,dur:0.05,v:v*(1-i*0.2)});};
 const bassN=(t,f,dur,v=0.25)=>tone({t,type:'sawtooth',f0:f,dur,v,filter:'lowpass',ff:320,q:1.2});
 
+/* ---------- SVG 아트 (art/ 폴더): 마스코트 + 코믹 타이포 ---------- */
+const ART_FILES={
+  m_ramyun:'Ram.svg', m_buldak:'Burr.svg', m_jjapa:'jjap.svg', m_neogury:'Neo.svg',
+  t_kidding:'Areyoukiddingme.svg', t_boss:'Bosslevel 2.svg',
+  t_egg:'Droptheegg.svg', t_mix:'In the mix!.svg', t_sauce:'Inthesauce.svg',
+  t_onfire:'Onfire.svg', t_shots:'Shots!!.svg',
+  t_letsgo:'Letsgo!.svg', t_slurp:'후루룹.svg',
+  t_banger:'Thatsabanger.svg', t_monster:'Thatsamonster.svg',
+  t_illegal:'That’sillegal.svg', t_crazy:'Youcrazy.svg', t_hits:'Youcookinhits!.svg',
+  t_ddrip:'Doubledrip.svg', t_triple:'Tripletailsbaby!.svg', t_dfire:'Double fire!.svg',
+  t_sesh:'Timeforcokinsesh.svg',
+};
+const ART={};
+for(const k in ART_FILES){
+  const im=new Image();
+  im.onload=()=>{ ART[k]=im; };
+  im.src='art/'+encodeURIComponent(ART_FILES[k]);
+}
+function drawArt(k,x,y,h,alpha=1){          /* h=박스 높이. 로드 전이면 false → 텍스트 폴백 */
+  const im=ART[k]; if(!im) return false;
+  const w=h*(im.width/im.height);
+  ctx.save(); ctx.globalAlpha*=alpha;
+  ctx.drawImage(im,x-w/2,y-h/2,w,h);
+  ctx.restore();
+  return true;
+}
+
 function tapFX(f,v=1){
   if(!A.ctx)return; const t=anow();
   if(f==='ramyun'){ tone({t,type:'square',f0:880,f1:1320,gt:0.05,dur:0.13,v:0.16*v,filter:'lowpass',ff:5200});
@@ -383,7 +410,9 @@ function startGame(){
   G.tut=!localStorage.getItem('djr_tut');         /* 첫 판이면 1번 주문 = 연습 모드 */
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
+  G.pStreak=0;
   pushOrder(); pushOrder();
+  spawnFX({kind:'artslam',art:'t_letsgo',t0:G.time+0.4});
   if(A.ctx){ A.nextBeat=anow()+0.05; A.beatN=0; }
   setState('game');
 }
@@ -417,7 +446,8 @@ function applyJudge(j,note){
     if(G.combo>=25 && G.combo%25===0){             /* 25 단위 콤보 축포 */
       G.flash=0.5; G.flashCol=[255,205,60];
       G.shake=Math.max(G.shake,7);
-      spawnFX({kind:'banner',text:`⚡ COMBO ${G.combo}!! ${G.combo>=100?'라면의 신!!':G.combo>=75?'전설의 DJ!!':G.combo>=50?'국물 마스터!!':'면발 봉인해제!!'}`,t0:G.time});
+      const mk=G.combo>=125?'t_boss':G.combo>=100?'t_crazy':G.combo>=75?'t_illegal':G.combo>=50?'t_monster':'t_hits';
+      spawnFX({kind:'artslam',art:mk,t0:G.time});
       feverFX();
       for(let i=0;i<18;i++) G.confetti.push({x:SW*0.5+rand(-SW*0.22,SW*0.22),y:SH*0.38,vx:rand(-90,90),vy:rand(-190,-70),rot:rand(0,6.3),vr:rand(-5,5),c:['#F2C14E','#ffe95e','#fff','#E8431F'][i%4],s:rand(4,9)});
     }
@@ -476,6 +506,10 @@ function finishOrder(order){
   if(order.miss===0){
     const b=Math.round(1000*diffMult())*(G.fever?2:1);
     G.score+=b; G.bowls++; G.perfectOrders++;
+    G.pStreak=(G.pStreak||0)+1;                    /* 연속 퍼펙트 콜아웃 */
+    if(G.pStreak===2) spawnFX({kind:'artslam',art:'t_ddrip',t0:G.time+0.5});
+    else if(G.pStreak===3) spawnFX({kind:'artslam',art:'t_triple',t0:G.time+0.5});
+    else if(G.pStreak===5) spawnFX({kind:'artslam',art:'t_dfire',t0:G.time+0.5});
     const gotHeart = G.lives<3;
     if(gotHeart) G.lives=Math.min(3,G.lives+1);
     if(!order.counts.jjaguri) slurpFX();          /* 드랍이 대신 울린다 */
@@ -492,11 +526,13 @@ function finishOrder(order){
       for(let i=0;i<30;i++) G.confetti.push({x:rand(0,SW),y:rand(-SH*0.15,0),vx:rand(-60,60),vy:rand(80,220),rot:rand(0,6.3),vr:rand(-5,5),c:['#F2C14E','#E8431F','#FFF6E0'][i%3],s:rand(5,10)});
     }
   }else if(ratio>=0.6){
+    G.pStreak=0;
     const b=Math.round(400*diffMult());
     G.score+=b; G.bowls++;
     slurpFX();
     G.eat={t0:G.time,customer:order.customer,bonus:b,perfect:false,heart:false,flavor:domOf(order)};
   }else{
+    G.pStreak=0;
     G.toasts.push({kind:'angry',t0:G.time,order});
   }
 }
@@ -534,11 +570,12 @@ function update(dt){
    FX
    ========================================================= */
 function spawnFX(o){
-  if(o.kind==='banner'||o.kind==='drop') G.fx=G.fx.filter(f=>f.kind!=='banner'&&f.kind!=='drop');
+  const BIG=['banner','drop','artslam'];
+  if(BIG.includes(o.kind)) G.fx=G.fx.filter(f=>!BIG.includes(f.kind));
   if(G.fx.length<80) G.fx.push(o);
 }
 function updateFX(dt){
-  G.fx=G.fx.filter(f=>G.time-f.t0 < (f.kind==='banner'?1.4:0.8));
+  G.fx=G.fx.filter(f=>G.time-f.t0 < ((f.kind==='banner'||f.kind==='artslam')?1.4:0.8));
   G.toasts=G.toasts.filter(t=>G.time-t.t0<1.9);
   for(const c of G.confetti){ c.x+=c.vx*dt; c.y+=c.vy*dt; c.vy+=140*dt; c.rot+=c.vr*dt; }
   G.confetti=G.confetti.filter(c=>c.y<SH+30);
@@ -1452,6 +1489,20 @@ function drawCust(x,y,r,type,t,mood='idle'){
    MASCOTS v2 — faithful to the character sheet
    ========================================================= */
 function drawMascot(x,y,s,fk,mood,t){
+  const aim=ART['m_'+(fk==='jjaguri'?'neogury':fk)];
+  if(aim){
+    let dy=0,dx=0;
+    if(mood==='dance'){ dy=-Math.abs(Math.sin(t*7))*s*0.16; dx=Math.sin(t*3.5)*s*0.04; }
+    else if(mood==='idle'){ dy=Math.sin(t*2.1)*s*0.025; }
+    else if(mood==='shock'){ dx=Math.sin(t*42)*s*0.05; }
+    else if(mood==='eat'){ dy=Math.sin(t*9)*s*0.03; }
+    ctx.save(); ctx.translate(x+dx,y+dy-s*0.35);
+    if(mood==='dance') ctx.rotate(Math.sin(t*3.5)*0.07);
+    const h=s*3.1, w=h*(aim.width/aim.height);
+    ctx.drawImage(aim,-w/2,-h/2,w,h);
+    ctx.restore();
+    return;
+  }
   const F=FLAVORS[fk];
   const u=s/5;
   let dy=0,dx=0,open=false;
@@ -1793,7 +1844,8 @@ function drawGame(){
     if(dt2<1.4){                                    /* title slam */
       const sc=dt2<0.25?easeOut(dt2/0.25)*1.35:1.35-easeOut((dt2-0.25)/0.3)*0.35;
       ctx.translate(SW/2,SH*0.565); ctx.scale(sc,sc); ctx.rotate(Math.sin(dt2*18)*0.02);
-      txtO('🔥 THE DROP!! 🔥',0,0,SW*0.074,'#ffe95e','#7a1400',SW*0.017);
+      if(!drawArt('t_banger',0,0,SW*0.8))
+        txtO('🔥 THE DROP!! 🔥',0,0,SW*0.074,'#ffe95e','#7a1400',SW*0.017);
     }else{                                          /* running multiplier */
       ctx.translate(SW*0.5,R.comboY+SW*0.082);
       ctx.scale(1+beat*0.12,1+beat*0.12);
@@ -1817,7 +1869,8 @@ function drawGame(){
       const sc=cfg[2]*(1+0.4*Math.sin(Math.min(t*10,Math.PI)));
       ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
       ctx.translate(f.x,f.y-t*14); ctx.scale(sc,sc);
-      txtO(cfg[0],0,0,SW*0.054,cfg[1],'rgba(20,10,0,0.85)',SW*0.013);
+      if(!(f.j==='miss'&&drawArt('t_kidding',0,0,SW*0.4)))
+        txtO(cfg[0],0,0,SW*0.054,cfg[1],'rgba(20,10,0,0.85)',SW*0.013);
       ctx.restore();
     }else if(f.kind==='ring'){
       const r_=SW*(f.big?0.062:0.048)+t*SW*0.45*(f.pow||1);
@@ -1841,7 +1894,15 @@ function drawGame(){
       const sc=1+0.5*Math.sin(Math.min(t*8,Math.PI));
       ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
       ctx.translate(SW*0.5,SH*0.313); ctx.scale(sc,sc);
-      txtO('DROP!',0,0,SW*0.078,FLAVORS[f.flavor].color,'#140c04',SW*0.017);
+      const AK={ramyun:'t_egg',buldak:'t_onfire',jjapa:'t_sauce',neogury:'t_shots',jjaguri:'t_mix'};
+      if(!drawArt(AK[f.flavor]||'t_egg',0,0,SW*0.52))
+        txtO('DROP!',0,0,SW*0.078,FLAVORS[f.flavor].color,'#140c04',SW*0.017);
+      ctx.restore();
+    }else if(f.kind==='artslam'){
+      const sc2=t<0.18?easeOut(t/0.18)*1.25:1.25-easeOut((t-0.18)/0.5)*0.25;
+      ctx.save(); ctx.globalAlpha=clamp(1-easeIn((t-0.95)/0.45),0,1);
+      ctx.translate(SW/2,SH*0.45); ctx.scale(sc2,sc2); ctx.rotate(Math.sin(t*9)*0.03);
+      drawArt(f.art,0,0,SW*0.72);
       ctx.restore();
     }else if(f.kind==='heartbreak'){
       const a=1-t/0.8;
@@ -2025,7 +2086,7 @@ function drawEat(){
     }
     /* wobbling slurp title */
     ctx.save(); ctx.translate(SW*0.73,cy-SH*0.145); ctx.rotate(Math.sin(t*7)*0.05);
-    txtO('후루룩~ 🍜',0,0,SW*0.042,'#fff','rgba(20,10,0,0.85)',SW*0.009);
+    if(!drawArt('t_slurp',0,0,SH*0.15)) txtO('후루룩~ 🍜',0,0,SW*0.042,'#fff','rgba(20,10,0,0.85)',SW*0.009);
     ctx.restore();
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
@@ -2176,7 +2237,7 @@ function drawAttract(){
       ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(2.4,-2.4); ctx.lineTo(0,-8); ctx.lineTo(-2.4,-2.4); ctx.closePath(); ctx.fill(); }
     ctx.restore();
   }
-  txt('Time for a cookin’ sesh!',SW/2,SH*0.32,SW*0.045,'#ffe95e','center',F_SANS,'800');
+  if(!drawArt('t_sesh',SW/2,SH*0.345,SH*0.17)) txt('Time for a cookin’ sesh!',SW/2,SH*0.32,SW*0.045,'#ffe95e','center',F_SANS,'800');
 
   if(!T3.ok) draw2DDeckFallback(SW/2,SH*0.47,SW*0.62);
 
