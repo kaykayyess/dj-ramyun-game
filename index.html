@@ -430,8 +430,8 @@ function applyJudge(j,note){
     const serv=clamp(note.order.counts[note.sec||note.flavor]||1,1,4);
     let played=false;
     if(note.flavor==='jjaguri')        /* 임시: 전용 파일 나올 때까지 JJAP 하나만 깔끔하게 */
-      played=playBuf('jja'+serv,vol*0.9,1,{group:'play',dur:1.8});
-    else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.9,1,{group:'play',dur:1.8});
+      played=playBuf('jja'+serv,vol*0.9,1,{group:'play'});
+    else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.9,1,{group:'play'});
     if(!played) dropFX(note.flavor,vol);
     G.flash=0.45; G.flashCol=hex2rgb(FLAVORS[note.flavor].color);
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
