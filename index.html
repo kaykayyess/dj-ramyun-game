@@ -1416,17 +1416,13 @@ function init3D(){
     T3.root.add(T3.playGlow);
 
     /* --- front face: 808hertz® 메탈 스티커 배지 (유광 블랙 + 크롬 양각) --- */
-    const badge=mkTex(512,128,(g)=>{
-      const rr2=(x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();};
-      const pg=g.createLinearGradient(0,8,0,120);
-      pg.addColorStop(0,'#42424a'); pg.addColorStop(0.28,'#101013'); pg.addColorStop(1,'#000');
-      g.fillStyle=pg; rr2(6,10,500,108,28); g.fill();
-      g.strokeStyle='rgba(255,255,255,0.5)'; g.lineWidth=3.5; rr2(8,12,496,104,27); g.stroke();
-      const tg=g.createLinearGradient(0,26,0,106);
+    const badge=mkTex(512,128,(g)=>{           /* 글자 모양 그대로 다이컷 — 사각 플레이트 없음 */
+      const tg=g.createLinearGradient(0,20,0,110);
       tg.addColorStop(0,'#ffffff'); tg.addColorStop(0.45,'#cdd0d8'); tg.addColorStop(0.55,'#8f939c');
-      tg.addColorStop(0.75,'#f4f6fa'); tg.addColorStop(1,'#b8bcc4');
-      g.font='800 64px Arial'; g.textAlign='center'; g.textBaseline='middle';
-      g.lineWidth=9; g.strokeStyle='rgba(0,0,0,0.9)'; g.strokeText('808hertz®',256,64);
+      tg.addColorStop(0.75,'#f4f6fa'); tg.addColorStop(1,'#b0b4bc');
+      g.font='900 82px Arial'; g.textAlign='center'; g.textBaseline='middle';
+      g.lineWidth=12; g.lineJoin='round';
+      g.strokeStyle='rgba(8,8,10,0.95)'; g.strokeText('808hertz®',256,64);   /* 블랙 베젤(글자 윤곽) */
       g.fillStyle=tg; g.fillText('808hertz®',256,64);
     });
     const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.085),
@@ -2379,10 +2375,10 @@ function drawGame(){
       ctx.save(); ctx.globalAlpha=Math.min(1,t/0.12)*(1-easeIn((t-0.15)/1.0));
       ctx.translate(SW*0.5,SH*0.313); ctx.scale(sc,sc);
       const pk=f.flavor==='jjaguri'?null:'p_'+SFX_KEY[f.flavor]+(f.serv||1);
-      const FB={ramyun:'DROP THE EGG!',buldak:'ON FIRE!!',jjapa:'IN THE SAUCE',
+      const FB={buldak:'ON FIRE!!',jjapa:'IN THE SAUCE',
                 neogury:'SHOTS!!',jjaguri:(f.serv||1)>=2?'DOUBLE MIX!!':'IN THE MIX!'};
-      if(!(pk&&drawArt(pk,0,0,SW*0.42)))
-        comicText(FB[f.flavor]||'DROP!',0,0,SW*0.052,'#F5E056');
+      if(!(pk&&drawArt(pk,0,0,SW*0.42)) && FB[f.flavor])
+        comicText(FB[f.flavor],0,0,SW*0.052,'#F5E056');
       ctx.restore();
     }else if(f.kind==='artslam'){
       if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
