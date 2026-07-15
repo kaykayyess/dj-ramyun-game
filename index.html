@@ -2623,7 +2623,16 @@ function drawGameover(){
     txt(r_[0],SW*0.22,ry,SW*0.035,'#5c3a00','left',F_SANS,'800');
     txt(r_[1],SW*0.78,ry,SW*0.035,'#1c150c','right',F_SANS,'900');
   });
-  SEQ.forEach((f,i)=>drawMascot(SW*(0.26+i*0.16),cy+ch*0.81,SH*0.04,f,'idle',G.time+i*0.3));
+  /* 🏆 랭킹 이벤트 상품 안내 */
+  const ey0=cy+ch*0.648, eh=ch*0.128;
+  ctx.fillStyle='rgba(28,21,12,0.92)';
+  rr(ctx,SW*0.13,ey0,SW*0.74,eh,SW*0.02); ctx.fill();
+  ctx.strokeStyle='#e0301e'; ctx.lineWidth=2;
+  rr(ctx,SW*0.13+1.5,ey0+1.5,SW*0.74-3,eh-3,SW*0.018); ctx.stroke();
+  txt('🏆 스코어 랭킹 이벤트',SW/2,ey0+eh*0.2,SW*0.03,'#ffe95e','center',F_SANS,'900');
+  txt("🥇 1등  DJ Ramyun Founder's Edition",SW/2,ey0+eh*0.5,SW*0.029,'#fff','center',F_SANS,'800');
+  txt('🥈 2등 불닭 100봉지 · 🥉 3등 라면 50봉지',SW/2,ey0+eh*0.79,SW*0.026,'rgba(255,255,255,0.85)','center',F_SANS,'700');
+  SEQ.forEach((f,i)=>drawMascot(SW*(0.26+i*0.16),cy+ch*0.845,SH*0.036,f,'idle',G.time+i*0.3));
   txt('DJ Ramyun by 808hertz®',SW/2,cy+ch*0.9,SW*0.029,'#5c3a00','center',F_SANS,'800');
   txt('game by O KWON',SW/2,cy+ch*0.95,SW*0.018,'rgba(92,58,0,0.5)','center',F_SANS,'700');
 
@@ -2656,6 +2665,10 @@ function shareScore(){
   g.font=`140px ${F_ARCADE}`; g.fillStyle='#1c150c'; g.fillText(String(G.score).padStart(7,'0'),540,630);
   g.font=`52px ${F_SANS}`;
   g.fillText(`${G.bowls}그릇 서빙 · PERFECT ${G.perfectOrders} · MAX COMBO ×${G.maxCombo}`,540,760);
+  g.font=`900 46px ${F_SANS}`; g.fillStyle='#e0301e';
+  g.fillText("🏆 1등 상품: DJ Ramyun Founder's Edition",540,860);
+  g.font=`38px ${F_SANS}`; g.fillStyle='#5c3a00';
+  g.fillText('2등 불닭 100봉지 · 3등 라면 50봉지',540,920);
   g.font=`250px ${F_SANS}`; g.fillText('🍜',540,1040);
   g.font=`44px ${F_SANS}`; g.fillStyle='#5c3a00';
   g.fillText('DJ Ramyun by 808hertz®',540,1170);
