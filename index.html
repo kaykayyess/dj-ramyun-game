@@ -51,10 +51,154 @@ const PADS = [
 const CUST_CAST = ['trav','carti','jay','ye','bey','phril','snoop','nicki','nigo','lisa','psy','em','billie','posty','tay'];
 const pickCust = ()=>CUST_CAST[irand(0,CUST_CAST.length-1)];
 const CUST_SKIN = {trav:'#8A5A3B',carti:'#6E4630',jay:'#7A4E33',ye:'#7E5236',bey:'#B07B4E',phril:'#8A5A3B',snoop:'#6E4630',nicki:'#9A6A44',nigo:'#F2C9A0',lisa:'#F5D3AE',psy:'#EDC49C',em:'#F7E3D4',billie:'#F6E2DA',posty:'#F2D8C4',tay:'#F8E6D8'};
-const CUST_QUOTE = {trav:"IT'S LIT!! 🔥🔥",carti:'슬랫! 이 맛 뭐야?!',jay:'클래식이네. 존중.',ye:'천재적인 맛이야.',bey:'완벽해~ Flawless!',phril:'맛이 노래하네 Happy~',snoop:'스무~스 하구먼 😎',nicki:'OMG 이 맛 실화?!',nigo:'이거… 명작이군.',lisa:'맛이 킬링파트야!!',psy:'옵빤 라면 스타일~!',em:'이 맛은 REAL이야.',billie:'헐… 미쳤다 이 맛.',posty:'맛이 완전 락스타야 🤘',tay:'이 맛은… 러브스토리!'};
+/* 손님 대사는 I18N 사전(cq_*)으로 이동 */
 const F_DISP   = 'Shrikhand,"Cooper Black","Arial Rounded MT Bold",serif';
 const F_ARCADE = '"Press Start 2P",ui-monospace,monospace';
-const F_SANS   = '-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif';
+const F_SANS   = '-apple-system,"Apple SD Gothic Neo","Hiragino Sans","Yu Gothic UI","PingFang TC","PingFang SC","Microsoft JhengHei","Microsoft YaHei","Noto Sans KR","Noto Sans JP","Noto Sans TC","Noto Sans SC","Malgun Gothic",sans-serif';
+
+/* ---------- i18n: 국가별 언어 자동 감지 + 사전 ---------- */
+const I18N_LANGS=['en','ko','ja','zh-Hant','zh-Hans'];
+const I18N_NAMES={en:'English',ko:'한국어',ja:'日本語','zh-Hant':'繁體中文','zh-Hans':'简体中文'};
+function detectLang(){
+  try{ const sv=localStorage.getItem('djr_lang'); if(I18N_LANGS.includes(sv)) return sv; }catch(e){}
+  for(const c0 of (navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'en'])){
+    const c=String(c0||'').toLowerCase();
+    if(c.startsWith('ko')) return 'ko';
+    if(c.startsWith('ja')) return 'ja';
+    if(c.startsWith('zh')) return (c.includes('tw')||c.includes('hk')||c.includes('mo')||c.includes('hant'))?'zh-Hant':'zh-Hans';
+    if(c.startsWith('en')) return 'en';
+  }
+  return 'en';
+}
+let LANG=detectLang();
+function setLang(l){ LANG=l; try{localStorage.setItem('djr_lang',l);}catch(e){} document.documentElement.lang=l; }
+function i18n(k,...a){
+  const d=I18N[LANG]||I18N.en;
+  const v=d[k]!==undefined?d[k]:I18N.en[k];
+  if(v===undefined) return k;
+  return a.length?v.replace(/\{(\d+)\}/g,(m,i)=>a[+i]!==undefined?String(a[+i]):m):v;
+}
+const I18N={
+ ko:{
+  fl_ramyun:'라면', fl_buldak:'불닭', fl_jjapa:'짜파', fl_neogury:'너구리', fl_jjaguri:'짜파구리',
+  fever:'🔥 FEVER ×2 — 점수 두 배! 🔥',
+  open:'영업 시작!!',
+  first_bowl:'🍜 첫 그릇 완성! 맛집 소문내러 갑시다~!!',
+  tut_play:'▶ PLAY로 끓이기 완성 — 손님에게 서빙!',
+  tut_tap:'박자에 맞춰 {0} 투하! 원판이 점선 원에 닿는 순간이에요',
+  tut_practice:'첫 손님은 연습 손님 — 부담 없이 끓여봐요! (하트 안 닳음)',
+  tut_retry:'아쉬워요! 다시 한 번 — 천천히 박자에 맞춰봐요 🙂',
+  tut_now:'지금이야!!',
+  ord_item:'{0} {1}인분', ord_item_guri:'{0} {1}개', ord_end:' 주세요~!', ord_none:'라면 1인분',
+  sad_cust:'손님이 실망했다… 💦',
+  spq1:'혀가 얼얼얼—!! 🔥', spq2:'매워서 죽을 것 같아!!! 🥵', spq3:'저세상이 보인다... 👼', spq4:'사망... 천국에서 만나요 👼',
+  eat_full:'배 터진다아아... 꺼억 🤰', eat_mukbang:'쩝쩝박사 인정?? 🎥', eat_default:'후루룩~ 최고!',
+  live:'LIVE 먹방', burp:'꺼어어억~~', finish:'완식!!', tip:'팁', slurp:'후루룩~ 🍜',
+  cq_trav:"IT'S LIT!! 🔥🔥", cq_carti:'슬랫! 이 맛 뭐야?!', cq_jay:'클래식이네. 존중.', cq_ye:'천재적인 맛이야.',
+  cq_bey:'완벽해~ Flawless!', cq_phril:'맛이 노래하네 Happy~', cq_snoop:'스무~스 하구먼 😎', cq_nicki:'OMG 이 맛 실화?!',
+  cq_nigo:'이거… 명작이군.', cq_lisa:'맛이 킬링파트야!!', cq_psy:'옵빤 라면 스타일~!', cq_em:'이 맛은 REAL이야.',
+  cq_billie:'헐… 미쳤다 이 맛.', cq_posty:'맛이 완전 락스타야 🤘', cq_tay:'이 맛은… 러브스토리!',
+  start_hint:'탭 또는 아무 키나 눌러 시작!',
+  row_bowls:'서빙한 그릇', row_bowls_v:'{0}그릇', row_perfect:'PERFECT 주문', row_perfect_v:'{0}개',
+  row_combo:'최고 콤보', row_best:'베스트',
+  prize_title:'🏆 스코어 랭킹 이벤트',
+  prize_1:"🥇 1등  DJ Ramyun Founder's Edition 1대",
+  prize_23:'🥈 2등 불닭 100봉지 · 🥉 3등 라면 50봉지',
+  btn_retry:'다시 도전!', btn_share:'스코어 공유 📤', over_hint:'빈 곳을 탭하면 타이틀로',
+  share_stats:'{0}그릇 서빙 · PERFECT {1} · MAX COMBO ×{2}',
+  share_prize1:"🏆 1등 상품: DJ Ramyun Founder's Edition 1대",
+  share_prize23:'2등 불닭 100봉지 · 3등 라면 50봉지',
+  share_text:'DJ Ramyun ORDER RUSH에서 {0}점! 🍜🎧 #DJRamyun #808hertz',
+  mute:'🔇 음소거 — M 키로 해제',
+ },
+ en:{
+  fl_ramyun:'Ramyun', fl_buldak:'Buldak', fl_jjapa:'Jjapa', fl_neogury:'Neoguri', fl_jjaguri:'Chapaguri',
+  fever:'🔥 FEVER ×2 — DOUBLE POINTS! 🔥',
+  open:'OPEN FOR BUSINESS!!',
+  first_bowl:'🍜 First bowl served! The word is spreading~!!',
+  tut_play:'▶ Hit PLAY to finish cooking — serve it up!',
+  tut_tap:'Drop the {0} on the beat! Tap when the disc hits the dotted ring',
+  tut_practice:'Your first customer is just practice — no pressure! (no heart loss)',
+  tut_retry:'So close! One more time — just follow the beat 🙂',
+  tut_now:'NOW!!',
+  ord_item:'{1}× {0}', ord_item_guri:'{1}× {0}', ord_end:', please!', ord_none:'1 ramyun',
+  sad_cust:'The customer is disappointed… 💦',
+  spq1:'My tongue is buzzing—!! 🔥', spq2:"I'M DYING, it's so spicy!!! 🥵", spq3:'I can see the other side... 👼', spq4:'Gone... see you in heaven 👼',
+  eat_full:"My belly's gonna pop... urp 🤰", eat_mukbang:'Certified slurp scientist?? 🎥', eat_default:'Slurrrp~ so good!',
+  live:'LIVE MUKBANG', burp:'BUUURP~~', finish:'CLEAN BOWL!!', tip:'TIP', slurp:'Slurp~ 🍜',
+  cq_trav:"IT'S LIT!! 🔥🔥", cq_carti:'Slatt! What IS this?!', cq_jay:'A classic. Respect.', cq_ye:'This flavor is genius.',
+  cq_bey:'Flawless~ simply flawless!', cq_phril:'The flavor sounds Happy~', cq_snoop:'Smoooooth 😎', cq_nicki:'OMG is this taste real?!',
+  cq_nigo:'This… is a masterpiece.', cq_lisa:'Flavor is the killing part!!', cq_psy:'Oppa ramyun style~!', cq_em:'This taste is REAL.',
+  cq_billie:'Whoa… this is insane.', cq_posty:'Tastes like a rockstar 🤘', cq_tay:'This flavor is… a love story!',
+  start_hint:'Tap or press any key to start!',
+  row_bowls:'Bowls served', row_bowls_v:'{0}', row_perfect:'PERFECT orders', row_perfect_v:'{0}',
+  row_combo:'Max combo', row_best:'Best',
+  prize_title:'🏆 SCORE RANKING EVENT',
+  prize_1:"🥇 1st — DJ Ramyun Founder's Edition ×1",
+  prize_23:'🥈 2nd — 100 packs Buldak · 🥉 3rd — 50 packs ramyun',
+  btn_retry:'PLAY AGAIN!', btn_share:'SHARE SCORE 📤', over_hint:'Tap empty space for the title screen',
+  share_stats:'{0} bowls served · PERFECT {1} · MAX COMBO ×{2}',
+  share_prize1:"🏆 1st prize: DJ Ramyun Founder's Edition ×1",
+  share_prize23:'2nd: 100 packs Buldak · 3rd: 50 packs ramyun',
+  share_text:'I scored {0} in DJ Ramyun ORDER RUSH! 🍜🎧 #DJRamyun #808hertz',
+  mute:'🔇 Muted — press M to unmute',
+ },
+ 'ja':{
+  fl_ramyun:'ラーメン', fl_buldak:'ブルダック', fl_jjapa:'チャパゲティ', fl_neogury:'ノグリ',
+  fl_jjaguri:'チャパグリ', fever:'🔥 FEVER ×2 — スコア2倍! 🔥', open:'営業スタート!!', first_bowl:'🍜 最初の一杯完成!バズらせに行くぞ~!!',
+  tut_play:'▶ PLAYで調理完成 — お客さんにサーブ!', tut_tap:'ビートに乗って{0}を投下!ディスクが点線の円に重なる瞬間だ!', tut_practice:'最初のお客さんは練習台!気軽に作ろう(ハート減らない)', tut_retry:'おしい!もう一回 — ビートに合わせてね 🙂', tut_now:'今だ!!',
+  ord_item:'{0} {1}人前', ord_item_guri:'{0} {1}セット', ord_end:'ください~!', ord_none:'ラーメン1人前',
+  sad_cust:'お客さんがガッカリ… 💦', spq1:'舌がビリビリビリ—!! 🔥', spq2:'辛すぎて死ぬぅぅ!!! 🥵', spq3:'あの世が見える… 👼',
+  spq4:'死亡…天国で会おう 👼', eat_full:'お腹はち切れるぅ…ゲフッ 🤰', eat_mukbang:'モッパン博士認定?? 🎥', eat_default:'ズルズル~ウマすぎ!!',
+  live:'LIVE モッパン', burp:'ゲェェェップ~~', finish:'完食!!', tip:'チップ',
+  slurp:'ズルズル~ 🍜', cq_trav:'IT\'S LIT!! 🔥🔥', cq_carti:'Slatt! この味なに?!', cq_jay:'クラシックだね。リスペクト。',
+  cq_ye:'天才的な味だ。', cq_bey:'完璧~ Flawless!', cq_phril:'味が歌ってる Happy~', cq_snoop:'スムーーズだねぇ 😎',
+  cq_nicki:'OMG この味マジ?!', cq_nigo:'これは…名作だ。', cq_lisa:'味がキリングパート!!', cq_psy:'オッパンラーメンスタイル~!',
+  cq_em:'この味はREALだ。', cq_billie:'ヤバ…この味狂ってる。', cq_posty:'味が完全にロックスター 🤘', cq_tay:'この味は…ラブストーリー!',
+  start_hint:'タップか好きなキーでスタート!', row_bowls:'サーブした丼', row_bowls_v:'{0}杯', row_perfect:'PERFECT注文',
+  row_perfect_v:'{0}件', row_combo:'最大コンボ', row_best:'ベスト', prize_title:'🏆 スコアランキングイベント',
+  prize_1:'🥇 1位 DJ Ramyun Founder\'s Edition 1台', prize_23:'🥈2位 ブルダック100袋・🥉3位 ラーメン50袋', btn_retry:'もう一杯!', btn_share:'スコアシェア 📤',
+  over_hint:'余白をタップでタイトルへ', share_stats:'{0}杯サーブ · PERFECT {1} · MAX COMBO ×{2}', share_prize1:'🏆 1位賞品: DJ Ramyun Founder\'s Edition 1台', share_prize23:'2位 ブルダック100袋・3位 ラーメン50袋',
+  share_text:'DJ Ramyun ORDER RUSHで{0}点! 🍜🎧 #DJRamyun #808hertz', mute:'🔇 ミュート中 — Mキーで解除',
+ },
+ 'zh-Hant':{
+  fl_ramyun:'泡麵', fl_buldak:'火雞麵', fl_jjapa:'炸醬麵', fl_neogury:'浣熊麵',
+  fl_jjaguri:'炸醬浣熊麵', fever:'🔥 FEVER ×2 — 分數翻倍!🔥', open:'正式開張!!', first_bowl:'🍜 第一碗完成!小店要爆紅啦~!!',
+  tut_play:'▶ 按 PLAY 完成烹煮 — 上菜囉!', tut_tap:'跟著節拍丟出{0}!圓盤碰到虛線圈那一刻就點!', tut_practice:'第一位是練習客人 — 輕鬆煮就好!(不扣愛心)', tut_retry:'差一點!再一次 — 跟著節拍就好 🙂', tut_now:'就是現在!!',
+  ord_item:'{0} {1}人份', ord_item_guri:'{0} {1}份', ord_end:',麻煩囉~!', ord_none:'泡麵 1人份',
+  sad_cust:'客人好失望… 💦', spq1:'舌頭麻掉啦—!!🔥', spq2:'超派!辣到快死了!!!🥵', spq3:'我看到阿祖了…👼',
+  spq4:'已陣亡…天堂見 👼', eat_full:'肚子要爆啦啊啊…嗝 🤰', eat_mukbang:'吃播博士認證??🎥', eat_default:'呼嚕嚕~好吃到升天!',
+  live:'LIVE 吃播', burp:'呃———嗝~~', finish:'完食!!', tip:'小費',
+  slurp:'呼嚕嚕~ 🍜', cq_trav:'IT\'S LIT!! 🔥🔥', cq_carti:'Slatt!這味道也太扯?!', cq_jay:'經典。Respect。',
+  cq_ye:'天才級的味道。', cq_bey:'完美~Flawless!', cq_phril:'味道在唱歌 Happy~', cq_snoop:'太~Smooth了 😎',
+  cq_nicki:'OMG 這味道真的假的?!', cq_nigo:'這一碗…是名作。', cq_lisa:'味道是killing part!!', cq_psy:'歐巴泡麵Style~!',
+  cq_em:'這味道超REAL。', cq_billie:'哇…這味道太狂了。', cq_posty:'味道根本是rockstar 🤘', cq_tay:'這味道是…Love Story!',
+  start_hint:'點擊或按任意鍵開始!', row_bowls:'上桌碗數', row_bowls_v:'{0}碗', row_perfect:'PERFECT 訂單',
+  row_perfect_v:'{0}筆', row_combo:'最高連擊', row_best:'最佳紀錄', prize_title:'🏆 分數排行榜活動',
+  prize_1:'🥇 第1名 DJ Ramyun Founder\'s Edition 1台', prize_23:'🥈 第2名 火雞麵100包・🥉 第3名 泡麵50包', btn_retry:'再來一碗!', btn_share:'分享分數 📤',
+  over_hint:'點空白處回標題畫面', share_stats:'上桌{0}碗 · PERFECT {1} · MAX COMBO ×{2}', share_prize1:'🏆 第1名獎品:DJ Ramyun Founder\'s Edition 1台', share_prize23:'第2名 火雞麵100包・第3名 泡麵50包',
+  share_text:'DJ Ramyun ORDER RUSH 狂拿{0}分!🍜🎧 #DJRamyun #808hertz', mute:'🔇 靜音中 — 按 M 鍵解除',
+ },
+ 'zh-Hans':{
+  fl_ramyun:'拉面', fl_buldak:'火鸡面', fl_jjapa:'炸酱面', fl_neogury:'浣熊面',
+  fl_jjaguri:'浣熊炸酱面', fever:'🔥 FEVER ×2 — 分数翻倍!🔥', open:'开张营业!!', first_bowl:'🍜 第一碗出锅!这店要火了~!!',
+  tut_play:'▶ 按 PLAY 煮好出锅 — 端给客人!', tut_tap:'卡点投下{0}!圆盘碰到虚线圈的瞬间就点!', tut_practice:'第一位是练习客人 — 放心煮!(不掉爱心)', tut_retry:'就差一点!再来一次 — 跟着节拍走 🙂', tut_now:'就是现在!!',
+  ord_item:'{0} {1}份', ord_item_guri:'{0} {1}碗', ord_end:',安排上~!', ord_none:'拉面 1份',
+  sad_cust:'客人心态崩了… 💦', spq1:'舌头麻了麻了—!! 🔥', spq2:'要被辣死了啊!!! 🥵', spq3:'辣到升天,看见天堂了... 👼',
+  spq4:'卒... 我们天堂见 👼', eat_full:'肚子要炸了啊啊... 嗝 🤰', eat_mukbang:'炫饭大师认证?? 🎥', eat_default:'哧溜哧溜~ 绝了!',
+  live:'LIVE 吃播', burp:'嗝呃呃呃~~', finish:'光盘!!', tip:'小费',
+  slurp:'哧溜~ 🍜', cq_trav:'IT\'S LIT!! 🔥🔥', cq_carti:'Slatt!这什么神仙味道?!', cq_jay:'这才是经典,Respect。',
+  cq_ye:'这味道,纯纯天才。', cq_bey:'完美~ Flawless!', cq_phril:'这味道会唱歌 Happy~', cq_snoop:'丝~滑,舒服了 😎',
+  cq_nicki:'OMG 好吃到离谱了吧?!', cq_nigo:'这碗…是传世名作。', cq_lisa:'这味道是killing part!!', cq_psy:'欧巴拉面style~!',
+  cq_em:'这味道,够REAL。', cq_billie:'我天…这味道疯了吧。', cq_posty:'这味道,纯Rockstar 🤘', cq_tay:'这味道…是Love Story!',
+  start_hint:'点击或按任意键开始!', row_bowls:'上桌碗数', row_bowls_v:'{0}碗', row_perfect:'PERFECT订单',
+  row_perfect_v:'{0}单', row_combo:'最高连击', row_best:'历史最佳', prize_title:'🏆 分数排行榜活动',
+  prize_1:'🥇 第1名 DJ Ramyun Founder\'s Edition 1台', prize_23:'🥈第2名 火鸡面100包 · 🥉第3名 拉面50包', btn_retry:'再来一局!', btn_share:'分享战绩 📤',
+  over_hint:'点击空白处回标题页', share_stats:'上桌{0}碗 · PERFECT {1} · MAX COMBO ×{2}', share_prize1:'🏆 第1名奖品:DJ Ramyun Founder\'s Edition 1台', share_prize23:'第2名 火鸡面100包 · 第3名 拉面50包',
+  share_text:'DJ Ramyun ORDER RUSH 拿下{0}分!🍜🎧 #DJRamyun #808hertz', mute:'🔇 已静音 — 按 M 键解除',
+ },
+};
+document.documentElement.lang=LANG;
 
 /* ---------- utils ---------- */
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -322,10 +466,24 @@ function judgeFX(j){
   else if(j==='bad'){ tone({t,type:'triangle',f0:220,f1:160,dur:0.08,v:0.08}); }
 }
 /* ---------- BGM: 직접 만든 비트 루프 (sfx/BEAT1·BEAT2) ---------- */
-A.MUSIC_BPM={beat1:90.7,beat2:92.2};   /* 자기상관 실측값 */
+A.MUSIC_BPM={beat1:71.2,beat2:90.56,beat3:92.16};   /* 자기상관 실측값 (3단계 비트) */
 A.bgmAnchor=0; A.bgmBpm=0;
-const BGM_FILES={beat1:['BEAT1.wav','BEAT1.mp3','beat1.wav','beat1.mp3','Beat1.wav','Beat1.mp3'],
-                 beat2:['BEAT2.wav','BEAT2.mp3','beat2.wav','beat2.mp3','Beat2.wav','Beat2.mp3']};
+/* 진행형 비트: 초반 beat1(느긋) → 중반 beat2 → 후반/피버 beat3(최고조) */
+const BGM_FILES={beat1:['beat1.mp3','beat1.wav','BEAT1.mp3','Beat1.mp3'],
+                 beat2:['beat2.mp3','beat2.wav','BEAT2.mp3','Beat2.mp3'],
+                 beat3:['beat3.mp3','beat3.wav','BEAT3.mp3','Beat3.mp3']};
+/* 주문 번호에 따라 어떤 비트가 깔릴지 — 노트 그리드 BPM과 음악을 일치시키는 단일 기준 */
+function beatTierForOrder(no){
+  if(no>=15) return 'beat3';
+  if(no>=7)  return 'beat2';
+  return 'beat1';
+}
+/* 실제 로드된 버퍼로 폴백 (파일이 아직 없거나 디코딩 전이면 있는 것 사용) */
+function resolveBeat(want){
+  if(A.mbuf[want]) return want;
+  for(const k of ['beat1','beat2','beat3']) if(A.mbuf[k]) return k;
+  return '';
+}
 A.mraw={}; A.mbuf={}; A.bgm=null; A.bgmKey='';
 /* 추가 SFX 후보(파일 넣으면 자동 활성): 후루룩 먹는 소리 · 냄비 보글보글 루프 */
 const EXTRA_SFX={slurp1:['SLURP1.wav'],slurp2:['SLURP2.wav'],slurp3:['SLURP3.wav'],slurp4:['SLURP4.wav'],
@@ -362,7 +520,9 @@ function bgmUpdate(){
   if(A.muted) return;
   if(G.state!=='game'){ if(A.bgm) bgmStop(); return; }
   for(const k in A.mraw) decodeBGM(k);
-  const want=(G.fever||G.time<G.drop)&&A.mbuf.beat2?'beat2':A.mbuf.beat1?'beat1':A.mbuf.beat2?'beat2':'';
+  /* 피버/THE DROP = 항상 최고조 비트(beat3), 아니면 주문 진행에 맞춘 단계 비트 */
+  const wantTier=(G.fever||G.time<G.drop)?'beat3':beatTierForOrder(G.curOrderNo||1);
+  const want=resolveBeat(wantTier);
   if(!want||want===A.bgmKey) return;
   bgmStop();
   const src=A.ctx.createBufferSource(); src.buffer=A.mbuf[want]; src.loop=true;
@@ -471,7 +631,8 @@ function windows(){ let l = clamp(1.5 - 0.65*(G.diff||0), 0.85, 1.5);
 
 function orderParams(no){
   /* 음악이 있으면 노트도 음악 BPM 그대로 — 난이도는 밀도로 올린다 */
-  const mkey=A.bgmKey||(A.mbuf&&(A.mbuf.beat1?'beat1':A.mbuf.beat2?'beat2':''))||'';
+  /* 노트 그리드 BPM = 이 주문에 깔릴 비트의 실측 BPM (음악·노트 싱크) */
+  const mkey=(A.mbuf&&A.mbuf[beatTierForOrder(no)])?beatTierForOrder(no):(A.bgmKey||'');
   const bpm = mkey ? A.MUSIC_BPM[mkey] : Math.min(86+(no-1)*1.8, 160);
   const r=Math.random();
   const secN = no<=14?1 : no<=20?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
@@ -521,6 +682,21 @@ function pushOrder(){
   G.notes[G.notes.length-1].last=true;
   G.cursorT=t+spb;
 }
+/* 연습 손님: 라면 2인분(탭2 + PLAY) 짧고 느긋한 그리드 — 성공할 때까지 반복 */
+function pushTutorialOrder(){
+  const bt=beatTierForOrder(0);                                  /* 초반 비트(beat1) */
+  const pb=(A.mbuf&&A.mbuf[bt])?A.MUSIC_BPM[bt]:86;
+  const spb=60/pb;
+  const order={no:0, tut:true, total:0, hit:0, miss:0, customer:pickCust(), bpm:pb, counts:{}, sections:[]};
+  let t=G.cursorT;
+  if(A.bgmAnchor&&A.bgmBpm){ const bl=60/A.bgmBpm; t=A.bgmAnchor+Math.ceil((t-A.bgmAnchor)/bl-1e-4)*bl; }
+  const f='ramyun', n=2;
+  order.counts[f]=n; order.sections.push({key:f,n});
+  order.total+=n+1;
+  for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:f,sec:f,time:t,order,bpm:pb}); t+=spb; }
+  G.notes.push({type:'play',flavor:f,sec:f,time:t,order,bpm:pb,last:true}); t+=spb*4;   /* PLAY 뒤 넉넉한 텀 */
+  G.cursorT=t+spb;
+}
 function setState(s){ G.state=s; G.stateT=G.time; if(s!=='game'&&A.ctx) bgmStop(); }
 function startGame(){
   G.score=0; G.lives=3; G.combo=0; G.maxCombo=0; G.bowls=0; G.orderCount=0; G.perfectOrders=0;
@@ -533,8 +709,9 @@ function startGame(){
   G.pStreak=0;
   setState('game');
   if(A.ctx){ A.nextBeat=anow()+0.05; A.beatN=0; bgmUpdate(); }   /* 먼저 비트를 걸고 */
-  pushOrder(); pushOrder();                                       /* 그 그리드 위에 주문 생성 */
-  spawnFX({kind:'artslam',art:'',text:'영업 시작!!',t0:G.time+0.4});
+  if(G.tut) pushTutorialOrder();                                  /* 연습 손님부터 (성공까지 반복) */
+  else { pushOrder(); pushOrder(); }                              /* 그 그리드 위에 주문 생성 */
+  spawnFX({kind:'artslam',art:'',text:i18n('open'),t0:G.time+0.4});
 }
 
 /* ---------- judgment ---------- */
@@ -559,7 +736,7 @@ function applyJudge(j,note){
   else{
     G.combo++; G.comboT=G.time;
     G.maxCombo=Math.max(G.maxCombo,G.combo);
-    if(G.combo===20){ spawnFX({kind:'banner',text:'🔥 FEVER ×2 — 점수 두 배! 🔥',t0:G.time}); feverFX(); }
+    if(G.combo===20){ spawnFX({kind:'banner',text:i18n('fever'),t0:G.time}); feverFX(); }
     if(G.combo>=25 && G.combo%25===0){             /* 25 단위 콤보 축포 */
       G.flash=0.5; G.flashCol=[255,205,60];
       G.shake=Math.max(G.shake,7);
@@ -600,7 +777,7 @@ function applyJudge(j,note){
 function markMiss(note,reason){
   note.judged='miss'; note.order.miss++;
   G.combo=0; G.fever=false;
-  if(!(G.tut&&note.order.no===1)) G.lives--;       /* 연습 주문은 하트가 안 닳는다 */
+  if(!note.order.tut) G.lives--;                   /* 연습 주문은 하트가 안 닳는다 */
   G.dmg=1; G.shake=Math.max(G.shake,8); T3.shake3=1;
   scratchFX();
   const R=regions();
@@ -618,8 +795,22 @@ function domOf(order){
 function finishOrder(order){
   const ratio=order.hit/order.total;
   if(T3.ok) T3.serveClear();   // the pot is emptied — bowl handed to the customer
-  if(G.tut&&order.no===1){ G.tut=false; window.__tutDone=true;
-    spawnFX({kind:'banner',text:'🍜 첫 그릇 완성! 맛집 소문내러 갑시다~!!',t0:G.time}); }
+  if(order.tut){                                   /* 연습 손님: 성공(전부 명중)할 때까지 반복 */
+    if(order.miss===0){                            /* 다 맞췄다 → 졸업, 진짜 영업 시작 */
+      G.tut=false; window.__tutDone=true;
+      G.bowls++; G.score+=500;
+      slurpFX();
+      G.eat={t0:G.time,customer:order.customer,bonus:500,perfect:true,heart:false,flavor:'ramyun',spice:0,serv:2};
+      for(let i=0;i<18;i++) G.confetti.push({x:rand(0,SW),y:rand(-SH*0.1,0),vx:rand(-30,30),vy:rand(60,160),rot:rand(0,6.3),vr:rand(-4,4),c:FLAVORS[SEQ[i%4]].color,s:rand(4,9)});
+      spawnFX({kind:'banner',text:i18n('first_bowl'),t0:G.time});
+      pushOrder(); pushOrder();
+    }else{                                          /* 놓쳤다 → 벌칙 없이 다시 연습 손님 */
+      G.combo=0; G.fever=false;
+      spawnFX({kind:'banner',text:i18n('tut_retry'),t0:G.time});
+      pushTutorialOrder();
+    }
+    return;
+  }
   if(order.miss===0){
     const b=Math.round(1000*diffMult())*(G.fever?2:1);
     G.score+=b; G.bowls++; G.perfectOrders++;
@@ -657,7 +848,7 @@ function update(dt){
   if(G.state!=='game'){ if(A.bgm) bgmStop(); return; }
   schedulerUpdate();
   // keep the conveyor stocked
-  if(G.cursorT - pnow() < 10) pushOrder();
+  if(!G.tut && G.cursorT - pnow() < 10) pushOrder();
   if(G.noteIdx>220){ G.notes.splice(0,200); G.noteIdx-=200; }
   /* 난이도 = 속도감: 주문·콤보에 따라 노트가 넓은 간격 그대로 더 빠르게 흐른다 */
   const scTgt=0.27+clamp((G.curOrderNo-4)*0.016,0,0.30)+Math.min(0.10,G.combo*0.0018);
@@ -969,17 +1160,17 @@ function init3D(){
     const rim=new THREE.DirectionalLight(0x9fb4ff,0.7); rim.position.set(-3,4,-4); T3.scene.add(rim);
     T3.root=new THREE.Group(); T3.root.scale.setScalar(0.8); T3.scene.add(T3.root);
 
-    /* --- deck body: product silhouette (circle + squared corner) --- */
+    /* --- deck body: 실물 실루엣 — 왼쪽 반원이 앞뒤 직선에 '정확히 접함' (돌출 없음) --- */
     const S=new THREE.Shape();
-    S.absarc(0,0,1.05,Math.PI*0.42,Math.PI*1.58,false);
-    S.lineTo(1.28,-1.02);
-    S.quadraticCurveTo(1.5,-1.02,1.5,-0.8);
-    S.lineTo(1.5,0.8);
-    S.quadraticCurveTo(1.5,1.02,1.28,1.02);
+    S.absarc(0,0,1.05,Math.PI*0.5,Math.PI*1.5,false);   /* 왼쪽 반원 (LP를 감싸는 곡선) */
+    S.lineTo(1.32,-1.05);                                /* 앞 모서리 = 원에 접하는 직선 */
+    S.quadraticCurveTo(1.52,-1.05,1.52,-0.85);
+    S.lineTo(1.52,0.85);
+    S.quadraticCurveTo(1.52,1.05,1.32,1.05);
     S.closePath();
     const deck=new THREE.Mesh(
       new THREE.ExtrudeGeometry(S,{depth:0.24,bevelEnabled:true,bevelThickness:0.05,bevelSize:0.05,bevelSegments:4,curveSegments:64}),
-      new THREE.MeshPhysicalMaterial({color:0xE0921C,roughness:0.34,metalness:0.02,
+      new THREE.MeshPhysicalMaterial({color:0xF7A21B,roughness:0.34,metalness:0.02,   /* 찐한 망고 옐로우 */
         clearcoat:0.65,clearcoatRoughness:0.24,envMapIntensity:0.85}));
     deck.rotation.x=-Math.PI/2; deck.position.y=0.05;
     deck.castShadow=true; deck.receiveShadow=true;
@@ -1000,7 +1191,7 @@ function init3D(){
     /* --- LP --- */
     const lpTex=mkTex(1024,1024,drawLPTex);
     const black=new THREE.MeshStandardMaterial({color:0x131110,roughness:0.45});
-    const lp=new THREE.Mesh(new THREE.CylinderGeometry(0.88,0.88,0.05,64),
+    const lp=new THREE.Mesh(new THREE.CylinderGeometry(0.98,0.98,0.05,64),   /* LP가 몸체 곡선에 거의 붙는다 */
       [black,new THREE.MeshStandardMaterial({map:lpTex.t,roughness:0.3,envMapIntensity:0.7}),black]);
     lp.position.set(0,0.37,0);
     lp.castShadow=true; lp.receiveShadow=true;
@@ -1148,9 +1339,9 @@ function init3D(){
 
     /* --- LED display --- */
     T3.led=mkTex(512,128,()=>{});
-    const led=new THREE.Mesh(new THREE.PlaneGeometry(0.86,0.215),
+    const led=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.15),
       new THREE.MeshBasicMaterial({map:T3.led.t,transparent:true}));
-    led.rotation.x=-Math.PI/2; led.position.set(1.02,0.345,-0.62);
+    led.rotation.x=-Math.PI/2; led.position.set(1.06,0.345,-0.4);
     T3.root.add(led);
 
     /* --- flavor icon column printed on the deck (product layout) --- */
@@ -1166,9 +1357,9 @@ function init3D(){
     };
     const icons=mkTex(256,640,drawIconCol);
     T3.iconsRedraw=()=>{ drawIconCol(icons.c.getContext('2d')); icons.t.needsUpdate=true; };
-    const iconCol=new THREE.Mesh(new THREE.PlaneGeometry(0.27,0.68),
+    const iconCol=new THREE.Mesh(new THREE.PlaneGeometry(0.24,0.56),
       new THREE.MeshBasicMaterial({map:icons.t,transparent:true}));
-    iconCol.rotation.x=-Math.PI/2; iconCol.position.set(1.07,0.343,-0.12);
+    iconCol.rotation.x=-Math.PI/2; iconCol.position.set(1.06,0.343,0.02);   /* 우측 세로열 (실물 위치) */
     T3.root.add(iconCol);
 
     /* --- TIMER / LOCK prints --- */
@@ -1184,7 +1375,7 @@ function init3D(){
     });
     const tlM=new THREE.Mesh(new THREE.PlaneGeometry(0.3,0.113),
       new THREE.MeshBasicMaterial({map:tl.t,transparent:true}));
-    tlM.rotation.x=-Math.PI/2; tlM.position.set(0.7,0.343,0.48);
+    tlM.rotation.x=-Math.PI/2; tlM.position.set(0.82,0.343,0.71);   /* PLAY 아래-왼쪽 (실물 위치) */
     T3.root.add(tlM);
 
     /* --- round play button + white light ring (as on the product) --- */
@@ -1194,27 +1385,27 @@ function init3D(){
        new THREE.MeshBasicMaterial({map:pb.t,transparent:true}),
        new THREE.MeshStandardMaterial({color:0x111111})]);
     playBtn.rotation.y=Math.PI/2;      /* cap UV maps image-right to +z — rotate so the arrow points +x (screen right) */
-    playBtn.position.set(1.05,0.36,0.42); T3.root.add(playBtn);
+    playBtn.position.set(1.11,0.36,0.47); T3.root.add(playBtn);
     const ring=new THREE.Mesh(new THREE.TorusGeometry(0.175,0.014,10,40),
       new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45}));
-    ring.rotation.x=Math.PI/2; ring.position.set(1.05,0.375,0.42);
+    ring.rotation.x=Math.PI/2; ring.position.set(1.11,0.375,0.47);
     T3.root.add(ring); T3.playRing=ring;
     const glowTex=mkTex(128,128,(g)=>{ const gr=g.createRadialGradient(64,64,6,64,64,62);
       gr.addColorStop(0,'rgba(255,255,255,0.9)'); gr.addColorStop(1,'rgba(255,255,255,0)');
       g.fillStyle=gr; g.fillRect(0,0,128,128); });
     T3.playGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex.t,transparent:true,opacity:0,depthWrite:false}));
-    T3.playGlow.position.set(1.05,0.5,0.42); T3.playGlow.scale.set(0.8,0.8,1);
+    T3.playGlow.position.set(1.11,0.5,0.47); T3.playGlow.scale.set(0.8,0.8,1);
     T3.root.add(T3.playGlow);
 
-    /* --- front face: 808hertz® logo + ridged knob with tick marks --- */
-    const logo=mkTex(512,128,(g)=>{
-      g.font='700 62px Arial'; g.fillStyle='#241606';
+    /* --- front face: Human touch tech® 인쇄 + ridged knob with tick marks (실물 전면) --- */
+    const logo=mkTex(512,96,(g)=>{
+      g.font='700 46px Arial'; g.fillStyle='#241606';
       g.textAlign='center'; g.textBaseline='middle';
-      g.fillText('808hertz®',256,64);
+      g.fillText('Human touch tech®',256,48);
     });
-    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.52,0.13),
+    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.66,0.124),
       new THREE.MeshBasicMaterial({map:logo.t,transparent:true}));
-    logoM.position.set(0.72,0.17,1.076);
+    logoM.position.set(0.55,0.17,1.106);
     T3.root.add(logoM);
     const ticks=mkTex(128,128,(g)=>{
       g.strokeStyle='#241606'; g.lineWidth=5; g.lineCap='round';
@@ -1225,16 +1416,20 @@ function init3D(){
     });
     const tickM=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.34),
       new THREE.MeshBasicMaterial({map:ticks.t,transparent:true}));
-    tickM.position.set(1.22,0.19,1.076);
+    tickM.position.set(1.22,0.19,1.106);
     T3.root.add(tickM);
     const knob=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.12,28),
       new THREE.MeshStandardMaterial({color:0x17130f,roughness:0.4}));
-    knob.rotation.x=Math.PI/2; knob.position.set(1.22,0.19,1.1);
+    knob.rotation.x=Math.PI/2; knob.position.set(1.22,0.19,1.13);
     T3.root.add(knob);
 
-    /* --- chopstick tonearm --- */
-    const pivot=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.1,24),yellowM.clone());
-    pivot.position.set(1.0,0.42,-0.95); T3.root.add(pivot);
+    /* --- 우상단 망고 노브 (실물의 원형 캡) --- */
+    const knobTopM=new THREE.MeshPhysicalMaterial({color:0xF9A825,roughness:0.3,metalness:0.02,
+      clearcoat:0.7,clearcoatRoughness:0.2,envMapIntensity:0.9});
+    const knobTop=new THREE.Mesh(new THREE.CylinderGeometry(0.155,0.165,0.13,32),knobTopM);
+    knobTop.position.set(1.06,0.4,-0.67); knobTop.castShadow=true; T3.root.add(knobTop);
+    const knobCap=new THREE.Mesh(new THREE.CylinderGeometry(0.105,0.105,0.05,28),knobTopM);
+    knobCap.position.set(1.06,0.48,-0.67); T3.root.add(knobCap);
 
     /* --- steam sprites --- */
     const st=mkTex(128,128,(g)=>{ const gr=g.createRadialGradient(64,64,6,64,64,62);
@@ -1916,7 +2111,7 @@ function drawGame(){
   ledTxt(String(G.score).padStart(7,'0'),SW*0.05,R.hudY+SH*0.015,SW*0.049);
   ctx.font=`900 ${SW*0.027}px ${F_SANS}`; ctx.fillStyle='rgba(255,220,160,0.6)';
   ctx.textAlign='center'; ctx.fillText('ORDER',SW*0.57,R.hudY-SH*0.017);
-  ledTxt('#'+String(G.curOrderNo).padStart(2,'0'),SW*0.57,R.hudY+SH*0.015,SW*0.042,'center');
+  ledTxt(G.tut?'#--':'#'+String(G.curOrderNo).padStart(2,'0'),SW*0.57,R.hudY+SH*0.015,SW*0.042,'center');   /* 연습 중엔 #-- */
   for(let i=0;i<3;i++)
     heart(SW*0.93-i*SW*0.078,R.hudY,SW*0.062,i<G.lives?'#ff2e3f':'rgba(255,255,255,0.13)',i<G.lives);
 
@@ -1978,16 +2173,15 @@ function drawGame(){
   /* ---- 첫 판 튜토리얼: 연습 주문 가이드 ---- */
   if(G.tut){
     const tn=G.notes[G.noteIdx];
-    if(tn&&tn.order.no===1){
-      const msg=tn.type==='play'?'▶ PLAY로 끓이기 완성 — 손님에게 서빙!'
-               :`박자에 맞춰 ${FLAVORS[tn.flavor].ko} 투하! 원판이 점선 원에 닿는 순간이에요`;
+    if(tn&&tn.order.tut){
+      const msg=tn.type==='play'?i18n('tut_play'):i18n('tut_tap',i18n('fl_'+tn.flavor));
       ctx.save(); ctx.globalAlpha=0.8+0.2*Math.sin(G.time*5);
       ctx.fillStyle='rgba(12,8,4,0.82)';
       rr(ctx,SW*0.1,SH*0.325,SW*0.8,SH*0.062,SH*0.02); ctx.fill();
       ctx.strokeStyle='#ffe95e'; ctx.lineWidth=1.5;
       rr(ctx,SW*0.1+1,SH*0.325+1,SW*0.8-2,SH*0.062-2,SH*0.019); ctx.stroke();
       txt('👆 '+msg,SW*0.5,SH*0.347,SH*0.019,'#ffe95e','center',F_SANS,'800');
-      txt('첫 손님은 연습 손님 — 부담 없이 끓여봐요! (하트 안 닳음)',SW*0.5,SH*0.372,SH*0.014,'rgba(255,255,255,0.65)');
+      txt(i18n('tut_practice'),SW*0.5,SH*0.372,SH*0.014,'rgba(255,255,255,0.65)');
       ctx.restore();
     }
   }
@@ -2082,7 +2276,7 @@ function drawGame(){
   /* ---- 튜토리얼: 눌러야 할 버튼을 손가락으로 콕 집어준다 ---- */
   if(G.tut){
     const tn2=G.notes[G.noteIdx];
-    if(tn2&&tn2.order.no===1){
+    if(tn2&&tn2.order.tut){
       const key2=tn2.type==='play'?'play':tn2.flavor;
       const pr2=G.padRects.find(q=>q.key===key2);
       if(pr2){
@@ -2104,7 +2298,7 @@ function drawGame(){
         const hop2=near?Math.abs(Math.sin(G.time*14))*SH*0.014:Math.abs(Math.sin(G.time*4.5))*SH*0.022;
         ctx.font=`${SW*0.09}px ${F_SANS}`; ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('👇',px,py-SH*0.09-hop2);
-        if(near) txtO('지금이야!!',px,py-SH*0.15,SW*0.042,'#ffe95e','#7a2800',SW*0.01);
+        if(near) txtO(i18n('tut_now'),px,py-SH*0.15,SW*0.042,'#ffe95e','#7a2800',SW*0.01);
         ctx.restore();
       }
     }
@@ -2127,8 +2321,8 @@ function drawGame(){
 /* the front of the line calls out their order */
 function orderSpeech(o){
   const parts=(o.sections||[]).filter(s=>o.counts[s.key]>0)
-    .map(s=>`${FLAVORS[s.key].ko} ${o.counts[s.key]}${s.key==='jjaguri'?'개':'인분'}`);
-  return (parts.length?parts.join(' · '):'라면 1인분')+' 주세요~!';
+    .map(s=>i18n(s.key==='jjaguri'?'ord_item_guri':'ord_item',i18n('fl_'+s.key),o.counts[s.key]));
+  return (parts.length?parts.join(' · '):i18n('ord_none'))+i18n('ord_end');
 }
 function drawToasts(){
   G.toasts.forEach((tst,i)=>{
@@ -2169,7 +2363,7 @@ function drawToasts(){
       ctx.strokeStyle='#ff5040'; ctx.lineWidth=2;
       rr(ctx,x+1.5,y+1.5,w-3,h-3,h*0.28); ctx.stroke();
       drawCust(x+h*0.5,y+h*0.52,h*0.3,tst.order.customer,G.time,'sad');
-      txt('손님이 실망했다… 💦',x+h*0.95,y+h*0.5,h*0.3,'#ff9081','left',F_SANS,'900');
+      txt(i18n('sad_cust'),x+h*0.95,y+h*0.5,h*0.3,'#ff9081','left',F_SANS,'900');
       ctx.restore();
     }
   });
@@ -2327,25 +2521,28 @@ function drawEat(){
       ctx.arc(fx+jit+sg*R*0.62,fy+R*0.18,R*0.3+Math.sin(t*9)*R*0.02,0,7); ctx.fill(); }
     ctx.fillStyle='rgba(255,118,108,0.5)';
     for(const sg of[-1,1]){ ctx.beginPath(); ctx.ellipse(fx+jit+sg*R*0.62,fy+R*0.2,R*0.17,R*0.11,0,0,7); ctx.fill(); }
+    const lbT=i18n('live');
+    ctx.font=`900 ${R*0.24}px ${F_SANS}`;
+    const lbW=R*0.52+ctx.measureText(lbT).width;
     ctx.fillStyle='rgba(12,8,4,0.85)';
-    rr(ctx,fx+R*0.95,fy-R*1.25,R*1.45,R*0.42,R*0.12); ctx.fill();
+    rr(ctx,fx+R*0.95,fy-R*1.25,lbW,R*0.42,R*0.12); ctx.fill();
     ctx.fillStyle=Math.sin(G.time*6)>0?'#ff2e2e':'#801010';
     ctx.beginPath(); ctx.arc(fx+R*1.18,fy-R*1.04,R*0.07,0,7); ctx.fill();
-    txt('LIVE 먹방',fx+R*1.72,fy-R*1.03,R*0.24,'#fff','center',F_SANS,'900');
+    txt(lbT,fx+R*1.36,fy-R*1.03,R*0.24,'#fff','left',F_SANS,'900');
   }
   /* ---- 4인분 완식 (불닭 제외): 배불러 죽음 ㅋㅋ ---- */
   if(full&&happy){
     const bp=Math.min(1,ht/0.9);
     ctx.save(); ctx.globalAlpha=1-bp;
     ctx.font=`${SW*0.05}px ${F_SANS}`; ctx.textAlign='center';
-    ctx.fillText('꺼어어억~~',fx+R*0.3,fy-R*1.5-bp*R*0.9);
+    ctx.fillText(i18n('burp'),fx+R*0.3,fy-R*1.5-bp*R*0.9);
     ctx.restore();
     if(!G.eat._boom){ G.eat._boom=1;                 /* 완식 축포 — 한 번만 빵! */
       for(let i=0;i<22;i++) G.confetti.push({x:fx+rand(-R,R),y:fy+rand(-R,R*0.5),vx:rand(-140,140),vy:rand(-220,-60),rot:rand(0,6.3),vr:rand(-6,6),c:['#F2C14E','#ffe95e','#fff'][i%3],s:rand(4,9)});
       G.shake=Math.max(G.shake,6);
     }
     ctx.save(); ctx.translate(fx-R*1.25,fy-R*1.15); ctx.rotate(-0.12+Math.sin(ht*6)*0.04);
-    comicText('완식!!',0,0,SW*0.062,'#F5E056');
+    comicText(i18n('finish'),0,0,SW*0.062,'#F5E056');
     ctx.restore();
     ctx.fillStyle='#F2B21C';
     for(const sg of[-1,1]){ starP(fx-R*1.25+sg*R*0.85,fy-R*1.35,R*0.14,ht*3); ctx.fill(); }
@@ -2404,14 +2601,14 @@ function drawEat(){
     /* wobbling slurp title */
     ctx.save(); ctx.translate(SW*0.74,cy-SH*0.118); ctx.rotate(Math.sin(t*7)*0.05);
     const slk=['t_slurp','t_slurp2','t_chop'][G.bowls%3];   /* 그릇마다 다른 먹방 타이포 */
-    if(!drawArt(slk,0,0,SH*0.105)) txtO('후루룩~ 🍜',0,0,SW*0.042,'#fff','rgba(20,10,0,0.85)',SW*0.009);
+    if(!drawArt(slk,0,0,SH*0.105)) txtO(i18n('slurp'),0,0,SW*0.042,'#fff','rgba(20,10,0,0.85)',SW*0.009);
     ctx.restore();
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
     const pop=easeOut(ht/0.16);
     ctx.save(); ctx.translate(SW*0.71,cy-SH*0.15); ctx.scale(pop,pop); ctx.rotate(Math.sin(ht*5)*0.04);
-    const spq=sp>=4?'사망... 천국에서 만나요 👼':sp>=3?'저세상이 보인다... 👼':sp>=2?'매워서 죽을 것 같아!!! 🥵':sp>=1?'혀가 얼얼얼—!! 🔥':full?'배 터진다아아... 꺼억 🤰':mukbang?'쩝쩝박사 인정?? 🎥':null;
-    txtO(spq||CUST_QUOTE[G.eat.customer]||'후루룩~ 최고!',0,0,SW*0.037,'#fff','rgba(20,10,0,0.85)',SW*0.008);
+    const spq=sp>=4?i18n('spq4'):sp>=3?i18n('spq3'):sp>=2?i18n('spq2'):sp>=1?i18n('spq1'):full?i18n('eat_full'):mukbang?i18n('eat_mukbang'):null;
+    txtO(spq||i18n('cq_'+G.eat.customer),0,0,SW*0.037,'#fff','rgba(20,10,0,0.85)',SW*0.008);
     ctx.restore();
     if(G.eat.perfect){
       /* three stars stamp in + a tip coin */
@@ -2427,7 +2624,7 @@ function drawEat(){
         ctx.save(); ctx.globalAlpha=clamp(a,0,1)*Math.min(1,cp*2);
         ctx.fillStyle='#F4C744'; ctx.strokeStyle='#8a5a00'; ctx.lineWidth=2;
         ctx.beginPath(); ctx.arc(fx+R*1.15,cyy,R*0.3,0,7); ctx.fill(); ctx.stroke();
-        txt('팁',fx+R*1.15,cyy+1,R*0.28,'#7a4a08','center',F_SANS,'900');
+        txt(i18n('tip'),fx+R*1.15,cyy+1,R*0.28,'#7a4a08','center',F_SANS,'900');
         ctx.restore(); }
       txtO('PERFECT!!',SW*0.68,cy+SH*0.075,SW*0.036,'#ffe95e','#7a2c00',SW*0.008);
     }
@@ -2442,7 +2639,7 @@ function drawEat(){
 }
 function drawPads(R){
   const tn=G.tut&&G.state==='game'?G.notes[G.noteIdx]:null;
-  const tut_tgt=tn&&tn.order.no===1?(tn.type==='play'?'play':tn.flavor):null;
+  const tut_tgt=tn&&tn.order.tut?(tn.type==='play'?'play':tn.flavor):null;
   const gap=SW*0.016;
   const cell=(SW-gap*6)/5;                     // 라면 패드도 플레이버튼과 같은 크기
   const playD=Math.min(cell,R.padH*0.95);
@@ -2479,7 +2676,7 @@ function drawPads(R){
       steamIcon(ctx,x+w/2,fy+h*0.31,w*0.25,pr>0?'#ffffff':F.color,3.6,p.key);
       if(pr>0) ctx.restore();
       txt(p.label,x+w/2,fy+h*0.63,w*0.2,'#fff','center',F_SANS,'900');
-      txt(F.ko,x+w/2,fy+h*0.85,w*0.18,'rgba(255,255,255,0.55)','center',F_SANS,'700');
+      txt(i18n('fl_'+p.key),x+w/2,fy+h*0.85,w*0.18,'rgba(255,255,255,0.55)','center',F_SANS,'700');
       if(pr>0&&pr<0.92){                          // release ripple
         ctx.globalAlpha=pr*0.6;
         ctx.strokeStyle=F.color; ctx.lineWidth=2.5;
@@ -2585,10 +2782,21 @@ function drawAttract(){
 
   if(Math.sin(G.time*5)>-0.3)
     comicText('GAME START',SW/2,SH*0.83,SW*0.07,'#ff4a2a');
-  txt('탭 또는 아무 키나 눌러 시작!',SW/2,SH*0.878,SW*0.03,'rgba(255,255,255,0.8)');
+  txt(i18n('start_hint'),SW/2,SH*0.878,SW*0.03,'rgba(255,255,255,0.8)');
   if(G.best>0){ ledTxt(`BEST ${String(G.best).padStart(7,'0')}`,SW/2,SH*0.92,SW*0.028,'center'); }
   txt('DJ Ramyun by 808hertz®',SW/2,SH*0.958,SW*0.026,'rgba(255,255,255,0.45)','center',F_ARCADE,'400');
   txt('game by O KWON',SW/2,SH*0.985,SW*0.015,'rgba(255,255,255,0.22)','center',F_SANS,'600');
+  /* 🌐 언어 전환 pill (우상단) */
+  {
+    const ltxt='🌐 '+I18N_NAMES[LANG];
+    ctx.font=`800 ${SH*0.015}px ${F_SANS}`;
+    const lw=ctx.measureText(ltxt).width+SH*0.028, lh=SH*0.03;
+    const lx=SW*0.96-lw, ly=SH*0.066;
+    ctx.fillStyle='rgba(0,0,0,0.55)'; rr(ctx,lx,ly,lw,lh,lh/2); ctx.fill();
+    ctx.strokeStyle='rgba(255,233,94,0.55)'; ctx.lineWidth=1.5; rr(ctx,lx,ly,lw,lh,lh/2); ctx.stroke();
+    txt(ltxt,lx+lw/2,ly+lh/2,SH*0.015,'#ffe95e','center',F_SANS,'800');
+    G.langRect={x:lx+SX-SH*0.012,y:ly-SH*0.012,w:lw+SH*0.024,h:lh+SH*0.024};
+  }
   /* CRT scanlines */
   ctx.save(); ctx.globalAlpha=0.12; ctx.fillStyle='#000';
   for(let y=0;y<SH;y+=4) ctx.fillRect(0,y,SW,1.4);
@@ -2616,8 +2824,8 @@ function drawGameover(){
   ctx.font=`${SW*0.093}px ${F_ARCADE}`; ctx.fillStyle='#1c150c';
   ctx.fillText(String(G.score).padStart(7,'0'),SW/2,cy+ch*0.35);
 
-  const rows=[['서빙한 그릇',G.bowls+'그릇'],['PERFECT 주문',G.perfectOrders+'개'],
-              ['최고 콤보','×'+G.maxCombo],['베스트',String(Math.max(G.best,G.score)).padStart(7,'0')]];
+  const rows=[[i18n('row_bowls'),i18n('row_bowls_v',G.bowls)],[i18n('row_perfect'),i18n('row_perfect_v',G.perfectOrders)],
+              [i18n('row_combo'),'×'+G.maxCombo],[i18n('row_best'),String(Math.max(G.best,G.score)).padStart(7,'0')]];
   rows.forEach((r_,i)=>{
     const ry=cy+ch*(0.45+i*0.06);
     txt(r_[0],SW*0.22,ry,SW*0.035,'#5c3a00','left',F_SANS,'800');
@@ -2629,9 +2837,9 @@ function drawGameover(){
   rr(ctx,SW*0.13,ey0,SW*0.74,eh,SW*0.02); ctx.fill();
   ctx.strokeStyle='#e0301e'; ctx.lineWidth=2;
   rr(ctx,SW*0.13+1.5,ey0+1.5,SW*0.74-3,eh-3,SW*0.018); ctx.stroke();
-  txt('🏆 스코어 랭킹 이벤트',SW/2,ey0+eh*0.2,SW*0.03,'#ffe95e','center',F_SANS,'900');
-  txt("🥇 1등  DJ Ramyun Founder's Edition 1대",SW/2,ey0+eh*0.5,SW*0.028,'#fff','center',F_SANS,'800');
-  txt('🥈 2등 불닭 100봉지 · 🥉 3등 라면 50봉지',SW/2,ey0+eh*0.79,SW*0.026,'rgba(255,255,255,0.85)','center',F_SANS,'700');
+  txt(i18n('prize_title'),SW/2,ey0+eh*0.2,SW*0.03,'#ffe95e','center',F_SANS,'900');
+  txt(i18n('prize_1'),SW/2,ey0+eh*0.5,SW*0.028,'#fff','center',F_SANS,'800');
+  txt(i18n('prize_23'),SW/2,ey0+eh*0.79,SW*0.026,'rgba(255,255,255,0.85)','center',F_SANS,'700');
   SEQ.forEach((f,i)=>drawMascot(SW*(0.26+i*0.16),cy+ch*0.845,SH*0.036,f,'idle',G.time+i*0.3));
   txt('DJ Ramyun by 808hertz®',SW/2,cy+ch*0.9,SW*0.029,'#5c3a00','center',F_SANS,'800');
   txt('game by O KWON',SW/2,cy+ch*0.95,SW*0.018,'rgba(92,58,0,0.5)','center',F_SANS,'700');
@@ -2639,11 +2847,11 @@ function drawGameover(){
   const bw=SW*0.4,bh=SH*0.06,by=cy+ch+SH*0.028;
   const bx1=SW/2-bw-SW*0.02,bx2=SW/2+SW*0.02;
   ctx.fillStyle='#e0301e'; rr(ctx,bx1,by,bw,bh,bh/2); ctx.fill();
-  txt('다시 도전!',bx1+bw/2,by+bh/2,bh*0.42,'#fff','center',F_SANS,'900');
+  txt(i18n('btn_retry'),bx1+bw/2,by+bh/2,bh*0.42,'#fff','center',F_SANS,'900');
   ctx.fillStyle='#1c150c'; rr(ctx,bx2,by,bw,bh,bh/2); ctx.fill();
-  txt('스코어 공유 📤',bx2+bw/2,by+bh/2,bh*0.38,'#fff','center',F_SANS,'900');
+  txt(i18n('btn_share'),bx2+bw/2,by+bh/2,bh*0.38,'#fff','center',F_SANS,'900');
   G.btnRects={retry:{x:bx1+SX,y:by,w:bw,h:bh},share:{x:bx2+SX,y:by,w:bw,h:bh}};
-  txt('빈 곳을 탭하면 타이틀로',SW/2,by+bh+SH*0.028,SW*0.027,'rgba(255,255,255,0.6)');
+  txt(i18n('over_hint'),SW/2,by+bh+SH*0.028,SW*0.027,'rgba(255,255,255,0.6)');
 }
 
 /* =========================================================
@@ -2664,11 +2872,11 @@ function shareScore(){
   g.font=`44px ${F_ARCADE}`; g.fillStyle='#5c3a00'; g.fillText('FINAL SCORE',540,470);
   g.font=`140px ${F_ARCADE}`; g.fillStyle='#1c150c'; g.fillText(String(G.score).padStart(7,'0'),540,630);
   g.font=`52px ${F_SANS}`;
-  g.fillText(`${G.bowls}그릇 서빙 · PERFECT ${G.perfectOrders} · MAX COMBO ×${G.maxCombo}`,540,760);
+  g.fillText(i18n('share_stats',G.bowls,G.perfectOrders,G.maxCombo),540,760);
   g.font=`900 46px ${F_SANS}`; g.fillStyle='#e0301e';
-  g.fillText("🏆 1등 상품: DJ Ramyun Founder's Edition 1대",540,860);
+  g.fillText(i18n('share_prize1'),540,860);
   g.font=`38px ${F_SANS}`; g.fillStyle='#5c3a00';
-  g.fillText('2등 불닭 100봉지 · 3등 라면 50봉지',540,920);
+  g.fillText(i18n('share_prize23'),540,920);
   g.font=`250px ${F_SANS}`; g.fillText('🍜',540,1040);
   g.font=`44px ${F_SANS}`; g.fillStyle='#5c3a00';
   g.fillText('DJ Ramyun by 808hertz®',540,1170);
@@ -2679,7 +2887,7 @@ function shareScore(){
     const file=new File([b],'dj-ramyun-score.png',{type:'image/png'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){
       try{ await navigator.share({files:[file],title:'DJ Ramyun — ORDER RUSH',
-        text:`DJ Ramyun ORDER RUSH에서 ${G.score}점! 🍜🎧 #DJRamyun #808hertz`}); return; }catch(e){}
+        text:i18n('share_text',G.score)}); return; }catch(e){}
     }
     const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='dj-ramyun-score.png'; a.click();
   },'image/png');
@@ -2689,7 +2897,14 @@ function shareScore(){
    INPUT
    ========================================================= */
 function pointAt(px,py){
-  if(G.state==='attract'){ padTap(null); return; }
+  if(G.state==='attract'){
+    const lr=G.langRect;
+    if(lr&&px>=lr.x&&px<=lr.x+lr.w&&py>=lr.y&&py<=lr.y+lr.h){
+      setLang(I18N_LANGS[(I18N_LANGS.indexOf(LANG)+1)%I18N_LANGS.length]);
+      coinFX(); return;
+    }
+    padTap(null); return;
+  }
   if(G.state==='over'){
     const b=G.btnRects;
     if(b.retry&&px>=b.retry.x&&px<=b.retry.x+b.retry.w&&py>=b.retry.y&&py<=b.retry.y+b.retry.h){ coinFX(); startGame(); return; }
@@ -2749,7 +2964,7 @@ function frame(tms){
   else if(G.state==='game') drawGame();
   else if(G.state==='over') drawGameover();
 
-  if(A.muted) txtO('🔇 음소거 — M 키로 해제',SW/2,SH*0.018,SW*0.026,'#fff','rgba(0,0,0,0.85)',SW*0.006);
+  if(A.muted) txtO(i18n('mute'),SW/2,SH*0.018,SW*0.026,'#fff','rgba(0,0,0,0.85)',SW*0.006);
 
   if(G.flash>0){ ctx.fillStyle=rgbStr(G.flashCol,G.flash*0.35); ctx.fillRect(0,0,SW,SH); }
   ctx.restore();
