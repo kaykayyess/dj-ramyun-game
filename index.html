@@ -45,7 +45,7 @@ const FLAVORS = {
 const SEQ = ['ramyun','buldak','jjapa','neogury'];
 const PADS = [
   {key:'ramyun', label:'RAM'}, {key:'buldak', label:'BUL'},
-  {key:'jjapa',  label:'JJA'}, {key:'neogury',label:'NEO'}, {key:'play', label:'PLAY'}
+  {key:'jjapa',  label:'JJAP'}, {key:'neogury',label:'NEO'}, {key:'play', label:'PLAY'}
 ];
 /* street-hip customer cast — rapper-inspired, BAPE-figure mood (닮았지만 다른) */
 const CUST_CAST = ['trav','carti','jay','ye','bey','phril','snoop','nicki','nigo','lisa','psy','em','billie','posty','tay'];
@@ -536,10 +536,7 @@ function applyJudge(j,note){
   else{
     G.combo++; G.comboT=G.time;
     G.maxCombo=Math.max(G.maxCombo,G.combo);
-    if(G.combo===4)  spawnFX({kind:'banner',text:'+ HIHAT!',t0:G.time});
-    if(G.combo===8)  spawnFX({kind:'banner',text:'+ SNARE! 댄스타임!',t0:G.time});
-    if(G.combo===14) spawnFX({kind:'banner',text:'+ BASSLINE!',t0:G.time});
-    if(G.combo===20){ spawnFX({kind:'banner',text:'🔥 FEVER MODE ×2 🔥',t0:G.time}); feverFX(); }
+    if(G.combo===20){ spawnFX({kind:'banner',text:'🔥 FEVER ×2 — 점수 두 배! 🔥',t0:G.time}); feverFX(); }
     if(G.combo>=25 && G.combo%25===0){             /* 25 단위 콤보 축포 */
       G.flash=0.5; G.flashCol=[255,205,60];
       G.shake=Math.max(G.shake,7);
@@ -651,7 +648,7 @@ function update(dt){
     const sk=cn.sec||cn.flavor, sec=cn.order.no+'-'+sk;
     if(sec!==G.curSection){
       G.curSection=sec;
-      if(T3.ok){ T3.serveClear(); T3.setPotFor(cn.order.counts[sk]); }
+      if(T3.ok){ T3.serveClear(); T3.setPotFor((sk==='jjaguri'?2:1)*cn.order.counts[sk]); }  /* 짜파구리 1개=2봉지 규모 */
     }
     if(!G.dying && pnow() > cn.time + windows().b) markMiss(cn,'late');
   }
@@ -1085,7 +1082,7 @@ function init3D(){
       T3.plop=1; };
     T3.serveClear=()=>{ for(const n of T3.noodleTubes) n.userData.tgt=0.001;
       for(const k in T3.tops) T3.tops[k].userData.tgt=0.001; };
-    T3.setPotFor=(serv)=>{ T3.potTarget=0.95+(clamp(serv,1,4)-1)/3*0.6; }; /* 1인분 0.95 → 4인분 1.55 */
+    T3.setPotFor=(serv)=>{ T3.potTarget=[0.78,1.15,1.6,2.15][clamp(serv,1,4)-1]; }; /* 1인분 0.78 → 4인분 2.15 (기계를 덮는다) */
     /* attract screen shows an appetizing full pot */
     for(let i=0;i<9;i++) T3.noodleTubes[i].userData.tgt=1;
     T3.tops.ramyun.userData.tgt=1;
@@ -1942,12 +1939,6 @@ function drawGame(){
       }
     }
   }
-  if(G.fever && !G.eat){
-    const bl=0.72+0.28*Math.sin(G.time*10);
-    ctx.globalAlpha=bl;
-    if(G.time>=G.drop) comicText('FEVER ×2',SW*0.5,R.comboY+SW*0.07,SW*0.042,'#ffe95e','#7a2800');
-    ctx.globalAlpha=1;
-  }
 
   /* ---- 첫 판 튜토리얼: 연습 주문 가이드 ---- */
   if(G.tut){
@@ -1979,10 +1970,6 @@ function drawGame(){
       ctx.translate(SW/2,SH*0.565); ctx.scale(sc,sc); ctx.rotate(Math.sin(dt2*18)*0.02);
       if(!drawArt('t_banger',0,0,SW*0.66))
         txtO('🔥 THE DROP!! 🔥',0,0,SW*0.074,'#ffe95e','#7a1400',SW*0.017);
-    }else{                                          /* running multiplier */
-      ctx.translate(SW*0.5,R.comboY+SW*0.082);
-      ctx.scale(1+beat*0.12,1+beat*0.12);
-      comicText('THE DROP ×3',0,0,SW*0.044,'#ffe95e','#7a1400');
     }
     ctx.restore();
   }
@@ -2290,7 +2277,7 @@ function drawPads(R){
       ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1.4;
       rr(ctx,x+5,fy+5,w-10,h*0.34,rad*0.7); ctx.stroke();
       steamIcon(ctx,x+w/2,fy+h*0.31,w*0.25,F.color,3.6,p.key);
-      txt(p.label,x+w/2,fy+h*0.63,w*0.22,'#fff','center',F_SANS,'900');
+      txt(p.label,x+w/2,fy+h*0.63,w*0.2,'#fff','center',F_SANS,'900');
       txt(F.ko,x+w/2,fy+h*0.85,w*0.18,'rgba(255,255,255,0.55)','center',F_SANS,'700');
       if(pr>0&&pr<0.92){                          // release ripple
         ctx.globalAlpha=pr*0.6;
