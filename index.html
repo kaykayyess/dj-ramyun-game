@@ -458,7 +458,7 @@ const G = {
   score:0, lives:3, combo:0, maxCombo:0, bowls:0, orderCount:0, perfectOrders:0,
   best:+(localStorage.getItem('djr_best')||0), newBest:false,
   bpm:96, notes:[], noteIdx:0, cursorT:0, curOrderNo:0,
-  fever:false, comboT:-9, dmg:0, dying:0, eat:null, drop:0, dropT0:0, tut:false, diff:0,
+  fever:false, comboT:-9, dmg:0, dying:0, eat:null, drop:0, dropT0:0, tut:false, scroll:0.27, diff:0,
   fx:[], toasts:[], confetti:[],
   shake:0, flash:0, flashCol:[255,255,255],
   bg:hex2rgb('#F5B31B'),
@@ -482,7 +482,7 @@ function orderParams(no){
   if(no>=13){ mn=2; mx=4; }
   /* 콤보가 쌓이면 몰아친다 — 미스로 콤보가 깨지면 다시 숨 돌릴 틈 */
   /* 반박자 노트 섞임 비율 — 주문이 쌓일수록, 콤보가 높을수록 서서히 */
-  const dbl = clamp((no-8)/18,0,0.55) + (G.combo>=25?0.25:G.combo>=15?0.12:0);
+  const dbl = clamp((no-14)/26,0,0.28) + (G.combo>=30?0.1:0);   /* 밀도는 살짝만 — 주 난이도는 속도 */
   return {bpm, secN, mn, mx, dbl:clamp(dbl,0,0.85)};
 }
 function pushOrder(){
@@ -526,7 +526,8 @@ function startGame(){
   G.score=0; G.lives=3; G.combo=0; G.maxCombo=0; G.bowls=0; G.orderCount=0; G.perfectOrders=0;
   G.notes=[]; G.noteIdx=0; G.bpm=96; G.fever=false; G.dying=0; G.newBest=false;
   G.fx.length=0; G.toasts.length=0; G.confetti.length=0; G.curOrderNo=0; G.curSection=''; G.eat=null; G.drop=0; G.dropT0=0;
-  G.tut=!localStorage.getItem('djr_tut2');         /* 첫 판이면 1번 주문 = 연습 모드 */
+  G.tut=!localStorage.getItem('djr_tut2');
+  G.scroll=0.27;         /* 첫 판이면 1번 주문 = 연습 모드 */
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
   G.pStreak=0;
@@ -619,7 +620,7 @@ function finishOrder(order){
   const ratio=order.hit/order.total;
   if(T3.ok) T3.serveClear();   // the pot is emptied — bowl handed to the customer
   if(G.tut&&order.no===1){ G.tut=false; localStorage.setItem('djr_tut2','1');
-    spawnFX({kind:'banner',text:'✨ 연습 끝 — 진짜 영업 시작!!',t0:G.time}); }
+    spawnFX({kind:'banner',text:'🍜 첫 그릇 완성! 맛집 소문내러 갑시다~!!',t0:G.time}); }
   if(order.miss===0){
     const b=Math.round(1000*diffMult())*(G.fever?2:1);
     G.score+=b; G.bowls++; G.perfectOrders++;
@@ -664,6 +665,9 @@ function update(dt){
   // keep the conveyor stocked
   if(G.cursorT - pnow() < 10) pushOrder();
   if(G.noteIdx>220){ G.notes.splice(0,200); G.noteIdx-=200; }
+  /* 난이도 = 속도감: 주문·콤보에 따라 노트가 넓은 간격 그대로 더 빠르게 흐른다 */
+  const scTgt=0.27+clamp((G.curOrderNo-4)*0.013,0,0.21)+Math.min(0.07,G.combo*0.0015);
+  G.scroll=lerp(G.scroll,scTgt,Math.min(1,dt*0.7));
   const cn=G.notes[G.noteIdx];
   if(cn){
     if(cn.bpm!==G.bpm) G.bpm=cn.bpm;
@@ -1863,7 +1867,7 @@ function regions(){
            railY:SH*0.265, judgeX:SW*0.28, comboY:SH*0.368,
            padY:SH*0.78, padH:SH*0.152 };
 }
-function pxPerBeat(){ return SW*0.27; }
+function pxPerBeat(){ return SW*(G.scroll||0.27); }
 
 function drawNoteDisc(x,y,n,dNear){
   const F=FLAVORS[n.flavor];
@@ -1981,15 +1985,15 @@ function drawGame(){
   if(G.tut){
     const tn=G.notes[G.noteIdx];
     if(tn&&tn.order.no===1){
-      const msg=tn.type==='play'?'마지막은 오른쪽 아래 ▶ PLAY 버튼!'
-               :`위 원판이 점선 원에 닿는 순간 → 아래 ${FLAVORS[tn.flavor].ko} 버튼 탭!`;
+      const msg=tn.type==='play'?'▶ PLAY로 끓이기 완성 — 손님에게 서빙!'
+               :`박자에 맞춰 ${FLAVORS[tn.flavor].ko} 투하! 원판이 점선 원에 닿는 순간이에요`;
       ctx.save(); ctx.globalAlpha=0.8+0.2*Math.sin(G.time*5);
       ctx.fillStyle='rgba(12,8,4,0.82)';
       rr(ctx,SW*0.1,SH*0.325,SW*0.8,SH*0.062,SH*0.02); ctx.fill();
       ctx.strokeStyle='#ffe95e'; ctx.lineWidth=1.5;
       rr(ctx,SW*0.1+1,SH*0.325+1,SW*0.8-2,SH*0.062-2,SH*0.019); ctx.stroke();
       txt('👆 '+msg,SW*0.5,SH*0.347,SH*0.019,'#ffe95e','center',F_SANS,'800');
-      txt('연습 주문 — 하트가 닳지 않아요!',SW*0.5,SH*0.372,SH*0.014,'rgba(255,255,255,0.65)');
+      txt('첫 손님은 연습 손님 — 부담 없이 끓여봐요! (하트 안 닳음)',SW*0.5,SH*0.372,SH*0.014,'rgba(255,255,255,0.65)');
       ctx.restore();
     }
   }
@@ -2106,7 +2110,7 @@ function drawGame(){
         const hop2=near?Math.abs(Math.sin(G.time*14))*SH*0.014:Math.abs(Math.sin(G.time*4.5))*SH*0.022;
         ctx.font=`${SW*0.09}px ${F_SANS}`; ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('👇',px,py-SH*0.09-hop2);
-        if(near) txtO('지금 탭!!',px,py-SH*0.15,SW*0.042,'#ffe95e','#7a2800',SW*0.01);
+        if(near) txtO('지금이야!!',px,py-SH*0.15,SW*0.042,'#ffe95e','#7a2800',SW*0.01);
         ctx.restore();
       }
     }
