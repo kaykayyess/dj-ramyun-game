@@ -468,7 +468,6 @@ function applyJudge(j,note){
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
     T3.punch=1; T3.burst=1;
     if(T3.ok) T3.showTop(note.flavor);
-    spawnFX({kind:'drop',flavor:note.flavor,t0:G.time});
   }else{
     if(!playBuf(SFX_KEY[note.flavor]+'_t',vol)) tapFX(note.flavor,vol);
     if(T3.ok) T3.addNoodle();
@@ -1034,7 +1033,8 @@ function init3D(){
     T3.root.add(led);
 
     /* --- flavor icon column printed on the deck (product layout) --- */
-    const icons=mkTex(256,640,(g)=>{
+    const drawIconCol=(g)=>{
+      g.clearRect(0,0,256,640);
       const seq=[['ramyun','Ramyun'],['buldak','Buldac'],['jjapa','Jjapa'],['neogury','Neogury']];
       seq.forEach(([k,n],i)=>{
         const y=92+i*156;
@@ -1042,7 +1042,9 @@ function init3D(){
         g.font='700 26px Arial'; g.fillStyle='rgba(48,30,8,0.8)';
         g.textAlign='center'; g.textBaseline='middle'; g.fillText(n,128,y+62);
       });
-    });
+    };
+    const icons=mkTex(256,640,drawIconCol);
+    T3.iconsRedraw=()=>{ drawIconCol(icons.c.getContext('2d')); icons.t.needsUpdate=true; };
     const iconCol=new THREE.Mesh(new THREE.PlaneGeometry(0.27,0.68),
       new THREE.MeshBasicMaterial({map:icons.t,transparent:true}));
     iconCol.rotation.x=-Math.PI/2; iconCol.position.set(1.07,0.343,-0.12);
@@ -1314,6 +1316,28 @@ function ledTxt(str,x,y,size,align='left'){
   ctx.shadowBlur=0; ctx.fillStyle='rgba(255,248,230,0.9)'; ctx.fillText(str,x,y);
   ctx.restore();
 }
+/* ---------- 공식 flavor 아이콘 (1.ai에서 추출) — 어떤 색으로든 틴트 ---------- */
+const ICON={}, ICON_TINT={};
+{ let pend=4;
+  ['ramyun','buldak','jjapa','neogury'].forEach(k=>{
+    const im=new Image();
+    im.onload=()=>{ if(--pend===0 && T3.iconsRedraw) T3.iconsRedraw(); };
+    im.src='art/icon_'+k+'.png';
+    ICON[k]=im;
+  });
+}
+function iconTint(k,color){
+  const ck=k+'|'+color; let cv=ICON_TINT[ck];
+  if(!cv){
+    const im=ICON[k];
+    cv=document.createElement('canvas'); cv.width=im.naturalWidth; cv.height=im.naturalHeight;
+    const g=cv.getContext('2d'); g.drawImage(im,0,0);
+    g.globalCompositeOperation='source-in'; g.fillStyle=color; g.fillRect(0,0,cv.width,cv.height);
+    ICON_TINT[ck]=cv;
+  }
+  return cv;
+}
+
 /* SVG 타이포와 같은 무드의 코믹 레터링 — 글자별 지터 + 두꺼운 아웃라인 */
 const F_COMIC="'Bangers', 'Arial Black', sans-serif";
 function comicText(str,x,y,size,fill,outline='#241505',align='center'){
@@ -1340,6 +1364,14 @@ function comicText(str,x,y,size,fill,outline='#241505',align='center'){
   ctx.restore();
 }
 function steamIcon(c,x,y,s,color,lw,flavor){
+  /* 공식 아이콘이 로드되면 그걸로 (짜파구리 혼합만 절차식 유지) */
+  const ik=flavor&&flavor!=='jjaguri'?flavor:null;
+  if(ik&&ICON[ik]&&ICON[ik].complete&&ICON[ik].naturalWidth){
+    const cv=iconTint(ik,color);
+    const h=s*2.0, w=h*(cv.width/cv.height);
+    c.drawImage(cv,x-w/2,y-h*0.56,w,h);
+    return;
+  }
   c.save();
   c.strokeStyle=color; c.fillStyle=color; c.lineWidth=lw||s*0.22; c.lineCap='round'; c.lineJoin='round';
   for(let i=-1;i<=1;i++){
@@ -1877,7 +1909,7 @@ function drawGame(){
     if(dt2<1.4){                                    /* title slam */
       const sc=dt2<0.25?easeOut(dt2/0.25)*1.35:1.35-easeOut((dt2-0.25)/0.3)*0.35;
       ctx.translate(SW/2,SH*0.565); ctx.scale(sc,sc); ctx.rotate(Math.sin(dt2*18)*0.02);
-      if(!drawArt('t_banger',0,0,SW*0.8))
+      if(!drawArt('t_banger',0,0,SW*0.66))
         txtO('🔥 THE DROP!! 🔥',0,0,SW*0.074,'#ffe95e','#7a1400',SW*0.017);
     }else{                                          /* running multiplier */
       ctx.translate(SW*0.5,R.comboY+SW*0.082);
@@ -1902,7 +1934,7 @@ function drawGame(){
       const sc=cfg[2]*(1+0.4*Math.sin(Math.min(t*10,Math.PI)));
       ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
       ctx.translate(f.x,f.y-t*14); ctx.scale(sc,sc);
-      if(!(f.j==='miss'&&drawArt('t_kidding',0,0,SW*0.4))){
+      if(!(f.j==='miss'&&drawArt('t_kidding',0,0,SW*0.3))){
         const jc={perfect:'#FFF6D6',good:'#D9EFC0',bad:'#CFC8BE',miss:'#FF6B5A'}[f.j];
         comicText(cfg[0],0,0,SW*0.058,jc);
       }
@@ -1936,8 +1968,8 @@ function drawGame(){
     }else if(f.kind==='artslam'){
       const sc2=t<0.18?easeOut(t/0.18)*1.25:1.25-easeOut((t-0.18)/0.5)*0.25;
       ctx.save(); ctx.globalAlpha=clamp(1-easeIn((t-0.95)/0.45),0,1);
-      ctx.translate(SW/2,SH*0.45); ctx.scale(sc2,sc2); ctx.rotate(Math.sin(t*9)*0.03);
-      drawArt(f.art,0,0,SW*0.72);
+      ctx.translate(SW/2,SH*0.425); ctx.scale(sc2,sc2); ctx.rotate(Math.sin(t*9)*0.03);
+      drawArt(f.art,0,0,SW*0.56);
       ctx.restore();
     }else if(f.kind==='heartbreak'){
       const a=1-t/0.8;
@@ -2120,8 +2152,8 @@ function drawEat(){
       ctx.stroke();
     }
     /* wobbling slurp title */
-    ctx.save(); ctx.translate(SW*0.73,cy-SH*0.145); ctx.rotate(Math.sin(t*7)*0.05);
-    if(!drawArt('t_slurp',0,0,SH*0.15)) txtO('후루룩~ 🍜',0,0,SW*0.042,'#fff','rgba(20,10,0,0.85)',SW*0.009);
+    ctx.save(); ctx.translate(SW*0.74,cy-SH*0.118); ctx.rotate(Math.sin(t*7)*0.05);
+    if(!drawArt('t_slurp',0,0,SH*0.105)) txtO('후루룩~ 🍜',0,0,SW*0.042,'#fff','rgba(20,10,0,0.85)',SW*0.009);
     ctx.restore();
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
