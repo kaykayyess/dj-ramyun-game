@@ -111,6 +111,7 @@ function initAudio(){
     const d=A.noiseBuf.getChannelData(0);
     for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
     for(const k in A.raw) decodeSFX(k);
+    for(const k in A.mraw) decodeBGM(k);
   }catch(e){ A.ctx=null; }
 }
 
@@ -156,6 +157,7 @@ function playBuf(k,v=1,rate=1,o={}){
   const vv=v*((A.norm&&A.norm[k])||1);
   const g=A.ctx.createGain(); g.gain.value=vv;
   src.connect(g); g.connect(A.master); src.start();
+  if(k!=='drop_voice') bgmDuck();
   if(o.dur){                         /* trim long stingers with a clean fade */
     g.gain.setValueAtTime(vv,t+Math.max(0.05,o.dur-0.3));
     g.gain.linearRampToValueAtTime(0,t+o.dur);
@@ -309,8 +311,49 @@ function judgeFX(j){
   else if(j==='good'){ tone({t,type:'sine',f0:1046,dur:0.08,v:0.07}); }
   else if(j==='bad'){ tone({t,type:'triangle',f0:220,f1:160,dur:0.08,v:0.08}); }
 }
+/* ---------- BGM: 직접 만든 비트 루프 (sfx/BEAT1·BEAT2) ---------- */
+const BGM_FILES={beat1:['BEAT1.wav','BEAT1.mp3','beat1.wav','beat1.mp3','Beat1.wav','Beat1.mp3'],
+                 beat2:['BEAT2.wav','BEAT2.mp3','beat2.wav','beat2.mp3','Beat2.wav','Beat2.mp3']};
+A.mraw={}; A.mbuf={}; A.bgm=null; A.bgmKey='';
+for(const k in BGM_FILES){
+  (async()=>{ for(const f of BGM_FILES[k]){
+    try{ const r=await fetch('sfx/'+encodeURIComponent(f)); if(!r.ok) continue;
+      A.mraw[k]=await r.arrayBuffer(); if(A.ctx) decodeBGM(k); return; }catch(e){}
+  } })();
+}
+function decodeBGM(k){
+  const b=A.mraw[k]; if(!b||A.mbuf[k]) return;
+  A.ctx.decodeAudioData(b.slice(0)).then(d=>{ A.mbuf[k]=d; }).catch(()=>{});
+}
+function bgmStop(){
+  if(A.bgm){ try{ A.bgm.g.gain.setTargetAtTime(0,A.ctx.currentTime,0.3); A.bgm.src.stop(A.ctx.currentTime+1); }catch(e){}
+    A.bgm=null; A.bgmKey=''; }
+}
+function bgmUpdate(){
+  if(!A.ctx||A.muted){ return; }
+  if(G.state!=='game'){ if(A.bgm) bgmStop(); return; }
+  for(const k in A.mraw) decodeBGM(k);
+  const want=(G.fever||G.time<G.drop)&&A.mbuf.beat2?'beat2':A.mbuf.beat1?'beat1':A.mbuf.beat2?'beat2':'';
+  if(!want||want===A.bgmKey) return;
+  bgmStop();
+  const src=A.ctx.createBufferSource(); src.buffer=A.mbuf[want]; src.loop=true;
+  const g=A.ctx.createGain(); g.gain.value=0.001;
+  g.gain.setTargetAtTime(0.34,A.ctx.currentTime,0.25);   /* 효과음이 주인공 — 비트는 받쳐주는 볼륨 */
+  src.connect(g); g.connect(A.master); src.start();
+  A.bgm={src,g}; A.bgmKey=want;
+}
+function bgmDuck(){                                      /* 사이드체인: 버튼 소리 순간 비트가 눌림 */
+  if(!A.bgm) return;
+  const t=A.ctx.currentTime, g=A.bgm.g.gain;
+  g.cancelScheduledValues(t);
+  g.setTargetAtTime(0.14,t,0.015);
+  g.setTargetAtTime(0.34,t+0.13,0.14);
+}
+
 function schedulerUpdate(){
   if(!A.ctx||G.state!=='game'||A.muted) return;
+  bgmUpdate();
+  if(A.bgm) return;                                      /* 비트 파일이 돌면 신스 비트는 침묵 */
   const spb=60/G.bpm;
   if(A.nextBeat < anow()-0.4) A.nextBeat = anow()+0.05;
   while(A.nextBeat < anow()+0.18){
@@ -403,7 +446,7 @@ function pushOrder(){
   G.notes[G.notes.length-1].last=true;
   G.cursorT=t+spb*1.2;
 }
-function setState(s){ G.state=s; G.stateT=G.time; }
+function setState(s){ G.state=s; G.stateT=G.time; if(s!=='game'&&A.ctx) bgmStop(); }
 function startGame(){
   G.score=0; G.lives=3; G.combo=0; G.maxCombo=0; G.bowls=0; G.orderCount=0; G.perfectOrders=0;
   G.notes=[]; G.noteIdx=0; G.bpm=96; G.fever=false; G.dying=0; G.newBest=false;
@@ -1792,34 +1835,6 @@ function drawGame(){
   for(let i=0;i<3;i++)
     heart(SW*0.93-i*SW*0.078,R.hudY,SW*0.062,i<G.lives?'#ff2e3f':'rgba(255,255,255,0.13)',i<G.lives);
 
-  /* ---- order chips ---- */
-  const cn=G.notes[Math.min(G.noteIdx,G.notes.length-1)];
-  const order=cn?cn.order:null;
-  if(order){
-    const secs=order.sections||[];
-    const chipW=Math.min(SW*0.24,(SW*0.952-(secs.length-1)*SW*0.014)/Math.max(1,secs.length)),chipH=SH*0.052;
-    secs.forEach((s,i)=>{
-      const f=s.key;
-      const cx=SW*0.024+i*(chipW+SW*0.014), cy=R.orderY-chipH/2;
-      const active=f===fbg;
-      ctx.globalAlpha=active?1:0.62;
-      ctx.fillStyle=active?'#fff':'rgba(0,0,0,0.35)';
-      rr(ctx,cx,cy,chipW,chipH,chipH*0.34); ctx.fill();
-      ctx.strokeStyle=active?'#1c150c':FLAVORS[f].color; ctx.lineWidth=active?2.5:1.5;
-      rr(ctx,cx+1,cy+1,chipW-2,chipH-2,chipH*0.32); ctx.stroke();
-      /* name on top, one steam glyph per serving below — counts you can SEE */
-      const n=order.counts[f];
-      txt(FLAVORS[f].ko,cx+chipW/2,cy+chipH*0.29,chipH*0.32,active?'#1c150c':'#fff','center',F_SANS,'800');
-      const gn=f==='jjaguri'?n*2:n;
-      const slot=Math.min(chipH*0.46,(chipW-chipH*0.6)/Math.max(1,gn));
-      const gs=slot*0.4, ix=cx+chipW/2-slot*gn/2;
-      const gc=active?FLAVORS[f].deep:(f==='jjapa'?'#c58c5a':FLAVORS[f].color);
-      for(let k=0;k<gn;k++)
-        steamIcon(ctx,ix+slot*(k+0.5),cy+chipH*0.72,gs,gc,Math.max(1.4,gs*0.3),f==='jjaguri'?(k<n?'jjapa':'neogury'):f);
-      ctx.globalAlpha=1;
-    });
-  }
-
   /* ---- section label (right of the mascot lane) ---- */
   comicText(FL.label,SW*0.63,R.labelY+SH*0.012,SW*0.088,FL.color==='#8a5432'?'#c58c5a':FL.color);
 
@@ -1861,9 +1876,9 @@ function drawGame(){
     ctx.save(); ctx.translate(SW*0.5,R.comboY); ctx.scale(pop,pop);
     if(tier>=3) ctx.rotate(Math.sin(G.time*9)*0.03);
     if(tier>=2){ ctx.shadowColor=tier>=3?col:'#ff9d1e'; ctx.shadowBlur=SW*(0.02+tier*0.008); }
-    comicText(`COMBO ×${c2}`,0,0,SW*(0.074+tier*0.008),col);
+    comicText(`COMBO ×${c2}`,0,0,SW*(0.058+tier*0.007),col);
     ctx.restore();
-    if(tier>=2){                                    /* 콤보 주위 별 오라 */
+    if(tier>=3){                                    /* 콤보 주위 별 오라 (50+) */
       const nS=2+tier*2;
       for(let i=0;i<nS;i++){
         const a2=G.time*2.2+i*(6.283/nS);
@@ -1877,7 +1892,7 @@ function drawGame(){
   if(G.fever && !G.eat){
     const bl=0.72+0.28*Math.sin(G.time*10);
     ctx.globalAlpha=bl;
-    if(G.time>=G.drop) comicText('FEVER ×2',SW*0.5,R.comboY+SW*0.082,SW*0.056,'#ffe95e','#7a2800');
+    if(G.time>=G.drop) comicText('FEVER ×2',SW*0.5,R.comboY+SW*0.07,SW*0.042,'#ffe95e','#7a2800');
     ctx.globalAlpha=1;
   }
 
@@ -1914,7 +1929,7 @@ function drawGame(){
     }else{                                          /* running multiplier */
       ctx.translate(SW*0.5,R.comboY+SW*0.082);
       ctx.scale(1+beat*0.12,1+beat*0.12);
-      comicText('THE DROP ×3',0,0,SW*0.054,'#ffe95e','#7a1400');
+      comicText('THE DROP ×3',0,0,SW*0.044,'#ffe95e','#7a1400');
     }
     ctx.restore();
   }
@@ -1934,9 +1949,10 @@ function drawGame(){
       const sc=cfg[2]*(1+0.4*Math.sin(Math.min(t*10,Math.PI)));
       ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
       ctx.translate(f.x,f.y-t*14); ctx.scale(sc,sc);
-      if(!(f.j==='miss'&&drawArt('t_kidding',0,0,SW*0.3))){
+      if(!(f.j==='miss'&&drawArt('t_kidding',0,0,SW*0.26))){
         const jc={perfect:'#FFF6D6',good:'#D9EFC0',bad:'#CFC8BE',miss:'#FF6B5A'}[f.j];
-        comicText(cfg[0],0,0,SW*0.058,jc);
+        if(f.j!=='perfect') ctx.globalAlpha*=0.7;
+        comicText(cfg[0],0,0,SW*(f.j==='perfect'?0.046:0.036),jc);
       }
       ctx.restore();
     }else if(f.kind==='ring'){
@@ -1954,8 +1970,8 @@ function drawGame(){
       const a=t<0.15?t/0.15:t>1.1?1-(t-1.1)/0.3:1;
       ctx.save(); ctx.globalAlpha=clamp(a,0,1);
       ctx.fillStyle='rgba(15,9,3,0.85)';
-      rr(ctx,SW*0.2,SH*0.296,SW*0.6,SH*0.04,SH*0.02); ctx.fill();
-      txt(f.text,SW*0.5,SH*0.316,SH*0.018,'#ffe95e','center',F_SANS,'900');
+      rr(ctx,SW*0.24,SH*0.298,SW*0.52,SH*0.034,SH*0.017); ctx.fill();
+      txt(f.text,SW*0.5,SH*0.315,SH*0.0155,'#ffe95e','center',F_SANS,'900');
       ctx.restore();
     }else if(f.kind==='drop'){
       const sc=1+0.5*Math.sin(Math.min(t*8,Math.PI));
@@ -1969,7 +1985,7 @@ function drawGame(){
       const sc2=t<0.18?easeOut(t/0.18)*1.25:1.25-easeOut((t-0.18)/0.5)*0.25;
       ctx.save(); ctx.globalAlpha=clamp(1-easeIn((t-0.95)/0.45),0,1);
       ctx.translate(SW/2,SH*0.425); ctx.scale(sc2,sc2); ctx.rotate(Math.sin(t*9)*0.03);
-      drawArt(f.art,0,0,SW*0.56);
+      drawArt(f.art,0,0,SW*0.5);
       ctx.restore();
     }else if(f.kind==='heartbreak'){
       const a=1-t/0.8;
@@ -2011,7 +2027,7 @@ function drawToasts(){
       const pop=easeOut(t/0.22)*(1-easeIn((t-1.55)/0.35));
       if(pop<=0) return;
       const msg=orderSpeech(tst.order);
-      const h=SH*0.045;
+      const h=SH*0.04;
       let fs=h*0.46; ctx.font=`800 ${fs}px ${F_SANS}`;
       let tw=ctx.measureText(msg).width;
       const w=Math.min(SW*0.42,tw+h*0.9);
