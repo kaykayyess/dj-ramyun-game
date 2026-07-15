@@ -269,6 +269,36 @@ function initAudio(){
   }catch(e){ A.ctx=null; }
 }
 
+/* iOS: 사용자 제스처 안에서 확실하게 오디오 잠금 해제
+   + 무음(진동) 스위치 우회 — 무음 <audio> 루프를 재생해 'playback' 세션으로 전환
+   (무음 스위치가 켜져 있으면 WebAudio만으로는 소리가 전부 죽는다) */
+function unlockAudio(){
+  initAudio();
+  if(A.ctx&&A.ctx.state!=='running'){ try{ A.ctx.resume(); }catch(e){} }
+  if(!A.ctx||A._unlocked) return;
+  try{  /* 클래식 언락: 빈 버퍼 1샘플 재생 */
+    const b=A.ctx.createBuffer(1,1,22050), src=A.ctx.createBufferSource();
+    src.buffer=b; src.connect(A.ctx.destination); src.start(0);
+  }catch(e){}
+  try{  /* 무음 WAV 태그 (0.08초 무음 루프, playsinline) */
+    if(!A._sil){
+      const sr=8000,n=(sr*0.08)|0,ab=new ArrayBuffer(44+n*2),v=new DataView(ab);
+      const W=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i));};
+      W(0,'RIFF'); v.setUint32(4,36+n*2,true); W(8,'WAVEfmt '); v.setUint32(16,16,true);
+      v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,sr,true);
+      v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+      W(36,'data'); v.setUint32(40,n*2,true);
+      const au=document.createElement('audio');
+      au.src=URL.createObjectURL(new Blob([ab],{type:'audio/wav'}));
+      au.loop=true; au.setAttribute('playsinline',''); au.setAttribute('webkit-playsinline','');
+      A._sil=au;
+    }
+    const pr=A._sil.play();
+    if(pr&&pr.then) pr.then(()=>{ A._unlocked=true; },()=>{});
+    else A._unlocked=true;
+  }catch(e){}
+}
+
 /* ---------- sample SFX — the real product sounds (sfx/ folder) ---------- */
 const SFX_KEY={ramyun:'ram',buldak:'bul',jjapa:'jja',neogury:'neo'};
 const SFX_FILES={
@@ -3043,15 +3073,19 @@ function pointAt(px,py){
       if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h){ padTap(r.key); return; }
   }
 }
-uiC.addEventListener('pointerdown',e=>{ e.preventDefault(); initAudio(); pointAt(e.clientX,e.clientY); },{passive:false});
+uiC.addEventListener('pointerdown',e=>{ e.preventDefault(); unlockAudio(); pointAt(e.clientX,e.clientY); },{passive:false});
+window.addEventListener('touchend',()=>unlockAudio(),{passive:true});   /* 구형 iOS는 touchend에서만 언락 */
 document.addEventListener('visibilitychange',()=>{   /* iOS: 앱 복귀 시 사운드 복구 */
-  if(!document.hidden && A.ctx && A.ctx.state==='suspended') A.ctx.resume();
+  if(!document.hidden){
+    if(A.ctx && A.ctx.state!=='running'){ try{ A.ctx.resume(); }catch(e){} }
+    if(A._sil){ const pr=A._sil.play(); if(pr&&pr.catch) pr.catch(()=>{}); }
+  }
 });
 const KEYMAP={'1':'ramyun','2':'buldak','3':'jjapa','4':'neogury',
               'd':'ramyun','f':'buldak','j':'jjapa','k':'neogury',' ':'play'};
 window.addEventListener('keydown',e=>{
   if(e.repeat) return;
-  initAudio();
+  unlockAudio();
   if(G.state==='attract'){ padTap(null); e.preventDefault(); return; }
   if(G.state==='over'&&(e.key==='Enter'||e.key===' ')){ coinFX(); startGame(); e.preventDefault(); return; }
   if(e.key.toLowerCase()==='m'){ A.muted=!A.muted; if(A.master) A.master.gain.value=A.muted?0:0.9; return; }
