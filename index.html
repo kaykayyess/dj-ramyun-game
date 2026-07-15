@@ -364,7 +364,7 @@ const ART_FILES={
   p_ram1:'RAM Play.svg',  p_ram2:'RAM2 Play.svg',  p_ram3:'RAM3 Play.svg',  p_ram4:'RAM4 Play.svg',
   p_bul1:'BURR Play.svg', p_bul2:'BURR2 Play.svg', p_bul3:'BURR3 Play.svg', p_bul4:'BURR4 play.svg',
   p_jja1:'JJAP Play.svg', p_jja2:'JJAP2 Play.svg', p_jja3:'JJAP3 Play.svg', p_jja4:'JJAP4 Play.svg',
-  p_neo1:'NEO Play.svg',  p_neo2:'shots!.svg',     p_neo3:'NEO3 Play.svg',  p_neo4:'NEO4 Play.svg',
+  p_neo1:'NEO Play.svg',  p_neo2:'NEO2 Play.svg',  p_neo3:'NEO3 Play.svg',  p_neo4:'NEO4 Play.svg',
   t_slurp:'hururup.svg', t_slurp2:'Slurp.svg', t_chop:'Chop!.svg',
   t_sesh:'Timeforcokinsesh.svg',
   logo:'DJ_Ramyun_logo_800x800.png',
@@ -1342,7 +1342,7 @@ function init3D(){
     T3.led=mkTex(512,128,()=>{});
     const led=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.15),
       new THREE.MeshBasicMaterial({map:T3.led.t,transparent:true}));
-    led.rotation.x=-Math.PI/2; led.position.set(1.06,0.455,-0.4);
+    led.rotation.x=-Math.PI/2; led.position.set(1.18,0.455,-0.42);
     T3.root.add(led);
 
     /* --- flavor icon column printed on the deck (product layout) --- */
@@ -1360,7 +1360,7 @@ function init3D(){
     T3.iconsRedraw=()=>{ drawIconCol(icons.c.getContext('2d')); icons.t.needsUpdate=true; };
     const iconCol=new THREE.Mesh(new THREE.PlaneGeometry(0.24,0.56),
       new THREE.MeshBasicMaterial({map:icons.t,transparent:true}));
-    iconCol.rotation.x=-Math.PI/2; iconCol.position.set(1.06,0.453,0.02);   /* 우측 세로열 (실물 위치) */
+    iconCol.rotation.x=-Math.PI/2; iconCol.position.set(1.18,0.453,0.02);   /* 우측 세로열 (실물 위치) */
     T3.root.add(iconCol);
 
     /* --- TIMER / LOCK prints --- */
@@ -1376,7 +1376,7 @@ function init3D(){
     });
     const tlM=new THREE.Mesh(new THREE.PlaneGeometry(0.3,0.113),
       new THREE.MeshBasicMaterial({map:tl.t,transparent:true}));
-    tlM.rotation.x=-Math.PI/2; tlM.position.set(0.82,0.453,0.71);   /* PLAY 아래-왼쪽 (실물 위치) */
+    tlM.rotation.x=-Math.PI/2; tlM.position.set(0.94,0.453,0.84);   /* PLAY 아래-왼쪽 (실물 위치) */
     T3.root.add(tlM);
 
     /* --- round play button + white light ring (as on the product) --- */
@@ -1386,16 +1386,16 @@ function init3D(){
        new THREE.MeshBasicMaterial({map:pb.t,transparent:true}),
        new THREE.MeshStandardMaterial({color:0x111111})]);
     playBtn.rotation.y=Math.PI/2;      /* cap UV maps image-right to +z — rotate so the arrow points +x (screen right) */
-    playBtn.position.set(1.11,0.47,0.47); T3.root.add(playBtn);
+    playBtn.position.set(1.24,0.47,0.60); T3.root.add(playBtn);
     const ring=new THREE.Mesh(new THREE.TorusGeometry(0.175,0.014,10,40),
       new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45}));
-    ring.rotation.x=Math.PI/2; ring.position.set(1.11,0.485,0.47);
+    ring.rotation.x=Math.PI/2; ring.position.set(1.24,0.485,0.60);
     T3.root.add(ring); T3.playRing=ring;
     const glowTex=mkTex(128,128,(g)=>{ const gr=g.createRadialGradient(64,64,6,64,64,62);
       gr.addColorStop(0,'rgba(255,255,255,0.9)'); gr.addColorStop(1,'rgba(255,255,255,0)');
       g.fillStyle=gr; g.fillRect(0,0,128,128); });
     T3.playGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex.t,transparent:true,opacity:0,depthWrite:false}));
-    T3.playGlow.position.set(1.11,0.61,0.47); T3.playGlow.scale.set(0.8,0.8,1);
+    T3.playGlow.position.set(1.24,0.61,0.60); T3.playGlow.scale.set(0.8,0.8,1);
     T3.root.add(T3.playGlow);
 
     /* --- front face: Human touch tech® 인쇄 + ridged knob with tick marks (실물 전면) --- */
@@ -1404,9 +1404,9 @@ function init3D(){
       g.textAlign='center'; g.textBaseline='middle';
       g.fillText('808hertz®',256,48);
     });
-    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.55,0.115),
+    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.36,0.082),
       new THREE.MeshBasicMaterial({map:logo.t,transparent:true}));
-    logoM.position.set(0.55,0.22,1.106);
+    logoM.position.set(0.86,0.18,1.106);   /* 전면 우측, 코너 노브 옆 (실물 위치·크기) */
     T3.root.add(logoM);
     const ticks=mkTex(128,128,(g)=>{
       g.strokeStyle='#241606'; g.lineWidth=5; g.lineCap='round';
@@ -1428,7 +1428,7 @@ function init3D(){
     const knobTopM=new THREE.MeshPhysicalMaterial({color:0xF9A825,roughness:0.28,metalness:0.02,
       clearcoat:0.7,clearcoatRoughness:0.2,envMapIntensity:0.9});
     const knobTop=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.16,36),knobTopM);   /* 매끈한 1단 */
-    knobTop.position.set(1.06,0.53,-0.67); knobTop.castShadow=true; T3.root.add(knobTop);
+    knobTop.position.set(1.20,0.53,-0.70); knobTop.castShadow=true; T3.root.add(knobTop);
 
     /* --- steam sprites --- */
     const st=mkTex(128,128,(g)=>{ const gr=g.createRadialGradient(64,64,6,64,64,62);
@@ -1470,7 +1470,7 @@ function update3D(dt){
   T3.plop=Math.max(0,T3.plop-dt*4);
   T3.potS=lerp(T3.potS,T3.potTarget,Math.min(1,dt*4));
   T3.pot.scale.setScalar(T3.potS*(1+T3.plop*0.06));
-  T3.pot.position.y=0.40+Math.sin(G.time*5.2)*0.006+T3.punch*0.05+T3.plop*0.03;
+  T3.pot.position.y=0.51+Math.sin(G.time*5.2)*0.006+T3.punch*0.05+T3.plop*0.03;   /* LP 위에 안착 */
   const dryN=fb.key==='buldak'||fb.key==='jjapa'||fb.key==='jjaguri';   /* 볶음면 — 국물 없이 소스만 */
   T3.noodles.position.y=Math.sin(G.time*4.1)*0.012+(dryN?0.022:0);
   T3.noodles.rotation.y+=dt*0.25;
@@ -2598,7 +2598,7 @@ function drawEat(){
       ctx.stroke();
     }
     /* wobbling slurp title */
-    ctx.save(); ctx.translate(SW*0.70,cy-SH*0.125); ctx.rotate(Math.sin(t*7)*0.05);
+    ctx.save(); ctx.translate(SW*0.66,cy+SH*0.105); ctx.rotate(Math.sin(t*7)*0.05);   /* 드랍 타이포와 안 겹치게 아래로 */
     const slk=['t_slurp','t_slurp2','t_chop'][G.bowls%3];   /* 그릇마다 다른 먹방 타이포 */
     if(!drawArt(slk,0,0,SH*0.21)) txtO(i18n('slurp'),0,0,SW*0.08,'#fff','rgba(20,10,0,0.85)',SW*0.016);
     ctx.restore();
