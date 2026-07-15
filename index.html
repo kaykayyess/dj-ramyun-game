@@ -760,6 +760,7 @@ function startGame(){
   G.fx.length=0; G.toasts.length=0; G.confetti.length=0; G.curOrderNo=0; G.curSection=''; G.eat=null; G.drop=0; G.dropT0=0;
   G.tut=!window.__tutDone;   /* 접속마다 첫 판은 연습 손님 — 같은 세션 재도전은 생략 */
   G.space=0;                 /* 우주는 매 판 다시 열어야 한다 */
+  G.hypeLv=0;                /* 맛집 명성도 매 판 다시 쌓는다 */
   G.scroll=0.27;         /* 첫 판이면 1번 주문 = 연습 모드 */
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
@@ -871,9 +872,7 @@ function finishOrder(order){
   if(order.miss===0){
     const b=Math.round(1000*diffMult())*(G.fever?2:1);
     G.score+=b; G.bowls++; G.perfectOrders++;
-    G.pStreak=(G.pStreak||0)+1;                    /* 문구 콜아웃은 플레이 사운드 전용 — 스트릭은 콤보로 표현 */
-    { const hb=G.pStreak===3?'hype1':G.pStreak===6?'hype2':G.pStreak===9?'hype3':null;   /* 맛집 소문 단계 (천천히) */
-      if(hb) spawnFX({kind:'banner',text:i18n(hb),t0:G.time+0.7}); }
+    G.pStreak=(G.pStreak||0)+1;                    /* 소문 단계는 update()의 hypeTier()가 판정 */
     const gotHeart = G.lives<3;
     if(gotHeart) G.lives=Math.min(3,G.lives+1);
     if(!order.counts.jjaguri) slurpFX();          /* 드랍이 대신 울린다 */
@@ -901,6 +900,12 @@ function finishOrder(order){
   }
 }
 
+/* 맛집 소문 단계: 게임이 충분히 진행되고 + 퍼펙트가 이어질 때만 서서히 */
+function hypeTier(){
+  const ps=G.pStreak||0, no=G.curOrderNo||0;
+  return (ps>=12&&no>=14)?3:(ps>=8&&no>=10)?2:(ps>=4&&no>=6)?1:0;
+}
+
 /* ---------- flow update ---------- */
 function update(dt){
   updateFX(dt);
@@ -909,6 +914,9 @@ function update(dt){
   // keep the conveyor stocked
   if(!G.tut && G.cursorT - pnow() < 10) pushOrder();
   if(G.noteIdx>220){ G.notes.splice(0,200); G.noteIdx-=200; }
+  { const ht=hypeTier();                            /* 소문 단계 상승 순간만 축하 */
+    if(ht>(G.hypeLv||0)){ G.hypeLv=ht; spawnFX({kind:'banner',text:i18n('hype'+ht),t0:G.time+0.5}); }
+    else if(ht<(G.hypeLv||0)) G.hypeLv=ht; }
   /* 난이도 = 속도감: 주문·콤보에 따라 노트가 넓은 간격 그대로 더 빠르게 흐른다 */
   const scTgt=0.27+clamp((G.curOrderNo-4)*0.016,0,0.30)+Math.min(0.10,G.combo*0.0018);
   G.scroll=lerp(G.scroll,scTgt,Math.min(1,dt*0.7));
@@ -1602,8 +1610,8 @@ function update3D(dt){
         const o=G.notes[i].order;
         if(!seen.has(o.no)){ seen.add(o.no); want.push(o.customer); }
       }
-      /* 맛집 소문: 퍼펙트 스트릭이 쌓일수록 소문 듣고 몰려든 손님이 줄에 붙는다 */
-      const hype=Math.min(3,((G.pStreak||0)/3)|0);
+      /* 맛집 소문: 소문 단계만큼 손님이 줄에 붙는다 */
+      const hype=G.hypeLv||0;
       const extra=Math.min(3,Math.max(hype,Math.max(0,((G.orderCount-2)/8)|0)));
       const EX=['jay','tay','em','lisa','posty','bey','nigo','phril'];
       for(let k=0;k<extra;k++) want.push(EX[(k*2+1)%EX.length]);
@@ -2363,7 +2371,7 @@ function drawGame(){
   if(!T3.ok) draw2DDeckFallback(SW*0.5,SH*0.55,SW*0.7);
 
   /* ---- 소문난 맛집: 대기줄 웅성웅성 ---- */
-  { const hype=Math.min(3,((G.pStreak||0)/3)|0);
+  { const hype=G.hypeLv||0;
     if(hype>0){
       ctx.save();
       ctx.globalAlpha=0.4+0.22*Math.sin(G.time*2.1);
