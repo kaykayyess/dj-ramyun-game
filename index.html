@@ -714,6 +714,7 @@ function startGame(){
   G.notes=[]; G.noteIdx=0; G.bpm=96; G.fever=false; G.dying=0; G.newBest=false;
   G.fx.length=0; G.toasts.length=0; G.confetti.length=0; G.curOrderNo=0; G.curSection=''; G.eat=null; G.drop=0; G.dropT0=0;
   G.tut=!window.__tutDone;   /* 접속마다 첫 판은 연습 손님 — 같은 세션 재도전은 생략 */
+  G.space=0;                 /* 우주는 매 판 다시 열어야 한다 */
   G.scroll=0.27;         /* 첫 판이면 1번 주문 = 연습 모드 */
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
@@ -1162,7 +1163,7 @@ function init3D(){
     /* studio lights */
     T3.scene.add(new THREE.HemisphereLight(0xffe9c4,0x1c1006,0.55));
     T3.scene.add(new THREE.AmbientLight(0xfff2dd,0.22));
-    const key=new THREE.DirectionalLight(0xfff2e0,2.2); key.position.set(2.6,6.2,3.6);
+    const key=new THREE.DirectionalLight(0xfff2e0,2.7); key.position.set(2.6,6.2,3.6);
     key.castShadow=true; key.shadow.mapSize.set(1024,1024); key.shadow.radius=4;
     key.shadow.camera.left=-3; key.shadow.camera.right=3;
     key.shadow.camera.top=3; key.shadow.camera.bottom=-3;
@@ -1414,15 +1415,23 @@ function init3D(){
     T3.playGlow.position.set(1.24,0.61,0.60); T3.playGlow.scale.set(0.8,0.8,1);
     T3.root.add(T3.playGlow);
 
-    /* --- front face: Human touch tech® 인쇄 + ridged knob with tick marks (실물 전면) --- */
-    const logo=mkTex(512,96,(g)=>{
-      g.font='700 52px Arial'; g.fillStyle='#241606';
-      g.textAlign='center'; g.textBaseline='middle';
-      g.fillText('808hertz®',256,48);
+    /* --- front face: 808hertz® 메탈 스티커 배지 (유광 블랙 + 크롬 양각) --- */
+    const badge=mkTex(512,128,(g)=>{
+      const rr2=(x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();};
+      const pg=g.createLinearGradient(0,8,0,120);
+      pg.addColorStop(0,'#42424a'); pg.addColorStop(0.28,'#101013'); pg.addColorStop(1,'#000');
+      g.fillStyle=pg; rr2(6,10,500,108,28); g.fill();
+      g.strokeStyle='rgba(255,255,255,0.5)'; g.lineWidth=3.5; rr2(8,12,496,104,27); g.stroke();
+      const tg=g.createLinearGradient(0,26,0,106);
+      tg.addColorStop(0,'#ffffff'); tg.addColorStop(0.45,'#cdd0d8'); tg.addColorStop(0.55,'#8f939c');
+      tg.addColorStop(0.75,'#f4f6fa'); tg.addColorStop(1,'#b8bcc4');
+      g.font='800 64px Arial'; g.textAlign='center'; g.textBaseline='middle';
+      g.lineWidth=9; g.strokeStyle='rgba(0,0,0,0.9)'; g.strokeText('808hertz®',256,64);
+      g.fillStyle=tg; g.fillText('808hertz®',256,64);
     });
-    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.36,0.082),
-      new THREE.MeshBasicMaterial({map:logo.t,transparent:true}));
-    logoM.position.set(0.86,0.18,1.106);   /* 전면 우측, 코너 노브 옆 (실물 위치·크기) */
+    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.085),
+      new THREE.MeshStandardMaterial({map:badge.t,transparent:true,metalness:0.65,roughness:0.3,envMapIntensity:1.3}));
+    logoM.position.set(0.84,0.21,1.115);   /* 살짝 도드라진 메탈 스티커 */
     T3.root.add(logoM);
     const ticks=mkTex(128,128,(g)=>{
       g.strokeStyle='#241606'; g.lineWidth=5; g.lineCap='round';
@@ -1580,7 +1589,7 @@ function update3D(dt){
   /* flavor light */
   T3.flavorLight.color.set((G.fever||dropOn)
     ? `hsl(${(G.time*(dropOn?340:140))%360},95%,60%)` : fb.color);
-  T3.flavorLight.intensity=1.6+T3.punch*3.4+(G.fever?0.8:0)+(dropOn?1.8:0);
+  T3.flavorLight.intensity=2.0+T3.punch*3.4+(G.fever?0.9:0)+(dropOn?1.8:0);
   T3.playRing.material.color.set(G.fever?0xffd9a8:0xffffff);
   /* LED */
   if(G.state==='attract') setLED('ON');
@@ -2046,26 +2055,83 @@ function drawBG(){
   G.bg=mixc(G.bg,target,0.05);
   const c=G.bg;
   bgX.save(); bgX.translate(SX,0);
-  const g=bgX.createRadialGradient(SW*0.5,SH*0.3,SH*0.05,SW*0.5,SH*0.45,SH*0.8);
-  g.addColorStop(0,rgbStr(mixc(c,[255,255,255],0.22)));
-  g.addColorStop(0.55,rgbStr(c));
-  g.addColorStop(1,rgbStr(mixc(c,[0,0,0],0.55)));
+  /* 블랙 스튜디오 — 제품 화보처럼 옐로우가 대비되는 배경 */
+  bgX.fillStyle='#060504'; bgX.fillRect(0,0,SW,SH);
+  /* 잘할수록 우주가 서서히 열린다 (주문 진행 + 콤보 35+ 게이트) */
+  const spTgt=Math.min(1,clamp((G.curOrderNo-10)/20,0,0.8)+(G.combo>=35?0.25:0));
+  G.space=(G.space||0)+(spTgt-(G.space||0))*0.004;
+  if(G.space>0.03) drawSpace(G.space);
+  /* 기계를 비추는 웜 스포트라이트 (flavor 틴트) */
+  const g=bgX.createRadialGradient(SW*0.5,SH*0.52,SH*0.04,SW*0.5,SH*0.56,SH*0.62);
+  g.addColorStop(0,rgbStr(mixc(c,[255,244,214],0.55),0.5));
+  g.addColorStop(0.4,rgbStr(c,0.2));
+  g.addColorStop(1,'rgba(0,0,0,0)');
   bgX.fillStyle=g; bgX.fillRect(0,0,SW,SH);
   /* rotating light beams */
   bgX.save(); bgX.translate(SW/2,SH*0.14);
   for(let i=0;i<3;i++){
     bgX.save(); bgX.rotate(G.time*0.18+i*2.1);
-    bgX.fillStyle='rgba(255,255,255,0.05)';
+    bgX.fillStyle='rgba(255,244,220,0.05)';
     bgX.beginPath(); bgX.moveTo(0,0); bgX.arc(0,0,SH*1.1,-0.16,0.16); bgX.closePath(); bgX.fill();
     bgX.restore();
   }
   bgX.restore();
-  if(dotPat){ bgX.globalAlpha=0.08; bgX.fillStyle=dotPat; bgX.fillRect(0,0,SW,SH); bgX.globalAlpha=1; }
   /* vignette */
   const v=bgX.createRadialGradient(SW/2,SH/2,SH*0.35,SW/2,SH/2,SH*0.72);
   v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,0.4)');
   bgX.fillStyle=v; bgX.fillRect(0,0,SW,SH);
   bgX.restore();
+}
+
+/* ---------- 우주 배경: 별 → 성운 → 슈팅스타 → 밀키웨이 (극소수의 풍경) ---------- */
+const STARS=[...Array(150)].map(()=>({x:Math.random(),y:Math.random(),r:0.6+Math.random()*1.7,tw:Math.random()*6.3,c:Math.random()}));
+function drawSpace(lv){
+  const a1=clamp((lv-0.05)/0.3,0,1);
+  for(let i=0;i<STARS.length;i++){
+    const st=STARS[i];
+    if(i/STARS.length>lv*1.25) continue;                 /* 별이 하나둘 늘어난다 */
+    const tw=0.55+0.45*Math.sin(G.time*(1.1+st.c*2.2)+st.tw);
+    bgX.globalAlpha=a1*tw*(0.35+st.c*0.65);
+    bgX.fillStyle=st.c>0.85?'#ffe9b8':st.c>0.7?'#cfe4ff':'#ffffff';
+    bgX.beginPath(); bgX.arc(st.x*SW,st.y*SH,st.r,0,7); bgX.fill();
+  }
+  bgX.globalAlpha=1;
+  const a2=clamp((lv-0.45)/0.35,0,1);
+  if(a2>0){                                              /* 성운 */
+    const neb=(x,y,r,rc,gc,bc,aa)=>{ const ng=bgX.createRadialGradient(x,y,r*0.1,x,y,r);
+      ng.addColorStop(0,`rgba(${rc},${gc},${bc},${aa*a2})`); ng.addColorStop(1,`rgba(${rc},${gc},${bc},0)`);
+      bgX.fillStyle=ng; bgX.fillRect(x-r,y-r,r*2,r*2); };
+    neb(SW*0.22,SH*0.2,SH*0.24,96,52,190,0.32);
+    neb(SW*0.8,SH*0.32,SH*0.2,20,120,150,0.3);
+    neb(SW*0.6,SH*0.1,SH*0.17,190,50,120,0.26);
+  }
+  if(lv>0.55){                                           /* 슈팅스타 */
+    const ph=(G.time%7)/7;
+    if(ph<0.12){ const p2=ph/0.12;
+      const sx0=SW*(0.9-p2*0.75), sy0=SH*(0.06+p2*0.24);
+      bgX.save(); bgX.globalAlpha=Math.sin(p2*Math.PI)*0.9;
+      bgX.strokeStyle='#fff'; bgX.lineWidth=1.6; bgX.lineCap='round';
+      bgX.beginPath(); bgX.moveTo(sx0,sy0); bgX.lineTo(sx0+SW*0.09,sy0-SH*0.035); bgX.stroke(); bgX.restore(); }
+  }
+  const a3=clamp((lv-0.82)/0.18,0,1);
+  if(a3>0){                                              /* 밀키웨이 — 본 사람이 극소수 */
+    bgX.save(); bgX.translate(SW/2,SH*0.3); bgX.rotate(-0.42);
+    const mg=bgX.createLinearGradient(0,-SH*0.16,0,SH*0.16);
+    mg.addColorStop(0,'rgba(120,90,200,0)');
+    mg.addColorStop(0.35,`rgba(190,170,255,${0.16*a3})`);
+    mg.addColorStop(0.5,`rgba(255,244,225,${0.3*a3})`);
+    mg.addColorStop(0.65,`rgba(150,190,255,${0.16*a3})`);
+    mg.addColorStop(1,'rgba(90,60,160,0)');
+    bgX.fillStyle=mg; bgX.fillRect(-SW,-SH*0.16,SW*2,SH*0.32);
+    for(let i=0;i<70;i++){
+      const st=STARS[i%STARS.length];
+      const mx=(((st.x*2-0.5)+G.time*0.004)%1.4)-0.2, my=(st.c-0.5)*0.24;
+      bgX.globalAlpha=a3*(0.25+0.6*Math.abs(Math.sin(G.time*1.3+i)))*Math.max(0,1-Math.abs(my)*7);
+      bgX.fillStyle=['#fff','#ffe9c8','#cfe0ff','#ffd7f0'][i%4];
+      bgX.beginPath(); bgX.arc(mx*SW,my*SH,0.8+st.r*0.7,0,7); bgX.fill();
+    }
+    bgX.restore(); bgX.globalAlpha=1;
+  }
 }
 
 /* =========================================================
