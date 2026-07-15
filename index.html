@@ -1538,9 +1538,9 @@ function init3D(){
       g.strokeStyle='rgba(8,8,10,0.95)'; g.strokeText('808hertz®',256,64);   /* 블랙 베젤(글자 윤곽) */
       g.fillStyle=tg; g.fillText('808hertz®',256,64);
     });
-    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.085),
+    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.68,0.17),
       new THREE.MeshStandardMaterial({map:badge.t,transparent:true,metalness:0.65,roughness:0.3,envMapIntensity:1.3}));
-    logoM.position.set(0.84,0.21,1.115);   /* 살짝 도드라진 메탈 스티커 */
+    logoM.position.set(0.75,0.23,1.115);   /* 메탈 스티커 2배 — 전면 우측 코너 노브 왼쪽 */
     T3.root.add(logoM);
     const ticks=mkTex(128,128,(g)=>{
       g.strokeStyle='#241606'; g.lineWidth=5; g.lineCap='round';
