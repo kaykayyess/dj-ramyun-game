@@ -280,6 +280,7 @@ function scratchFX(){
   tone({t,type:'sawtooth',f0:420,f1:110,gt:0.14,dur:0.18,v:0.16,filter:'lowpass',ff:1500});
 }
 function slurpFX(){
+  if(playBuf('slurp',0.95,1,{group:'slurp'})) return;
   if(!A.ctx)return; const t=anow();
   for(let i=0;i<3;i++){ const tt=t+i*0.2;
     noiseHit({t:tt,type:'bandpass',f0:600,f1:2400,q:2.2,dur:0.18,v:0.32});
@@ -312,9 +313,20 @@ function judgeFX(j){
   else if(j==='bad'){ tone({t,type:'triangle',f0:220,f1:160,dur:0.08,v:0.08}); }
 }
 /* ---------- BGM: 직접 만든 비트 루프 (sfx/BEAT1·BEAT2) ---------- */
+A.MUSIC_BPM={beat1:90.7,beat2:92.2};   /* 자기상관 실측값 */
+A.bgmAnchor=0; A.bgmBpm=0;
 const BGM_FILES={beat1:['BEAT1.wav','BEAT1.mp3','beat1.wav','beat1.mp3','Beat1.wav','Beat1.mp3'],
                  beat2:['BEAT2.wav','BEAT2.mp3','beat2.wav','beat2.mp3','Beat2.wav','Beat2.mp3']};
 A.mraw={}; A.mbuf={}; A.bgm=null; A.bgmKey='';
+/* 추가 SFX 후보(파일 넣으면 자동 활성): 후루룩 먹는 소리 · 냄비 보글보글 루프 */
+const EXTRA_SFX={slurp:['SLURP.wav','SLURP.mp3','slurp.wav','slurp.mp3','후루룩.wav','후루룩.mp3','후루룹.wav','후루룹.mp3'],
+                 boil:['BOIL.wav','BOIL.mp3','boil.wav','boil.mp3','보글보글.wav','보글보글.mp3']};
+for(const k in EXTRA_SFX){
+  (async()=>{ for(const f of EXTRA_SFX[k]){
+    try{ const r=await fetch('sfx/'+encodeURIComponent(f)); if(!r.ok) continue;
+      A.raw[k]=await r.arrayBuffer(); if(A.ctx) decodeSFX(k); return; }catch(e){}
+  } })();
+}
 for(const k in BGM_FILES){
   (async()=>{ for(const f of BGM_FILES[k]){
     try{ const r=await fetch('sfx/'+encodeURIComponent(f)); if(!r.ok) continue;
@@ -323,14 +335,22 @@ for(const k in BGM_FILES){
 }
 function decodeBGM(k){
   const b=A.mraw[k]; if(!b||A.mbuf[k]) return;
-  A.ctx.decodeAudioData(b.slice(0)).then(d=>{ A.mbuf[k]=d; }).catch(()=>{});
+  A.ctx.decodeAudioData(b.slice(0)).then(d=>{
+    A.mbuf[k]=d;
+    const ch=d.getChannelData(0), sr=d.sampleRate;      /* mp3 앞뒤 무음 트림 → 루프·그리드 정확 */
+    let i0=0; while(i0<ch.length&&Math.abs(ch[i0])<0.02) i0++;
+    let i1=ch.length-1; while(i1>i0&&Math.abs(ch[i1])<0.02) i1--;
+    A.mtrim=A.mtrim||{}; A.mtrim[k]={lead:i0/sr,end:(i1+1)/sr};
+  }).catch(()=>{});
 }
 function bgmStop(){
   if(A.bgm){ try{ A.bgm.g.gain.setTargetAtTime(0,A.ctx.currentTime,0.3); A.bgm.src.stop(A.ctx.currentTime+1); }catch(e){}
     A.bgm=null; A.bgmKey=''; }
 }
 function bgmUpdate(){
-  if(!A.ctx||A.muted){ return; }
+  if(!A.ctx){ return; }
+  boilUpdate();
+  if(A.muted) return;
   if(G.state!=='game'){ if(A.bgm) bgmStop(); return; }
   for(const k in A.mraw) decodeBGM(k);
   const want=(G.fever||G.time<G.drop)&&A.mbuf.beat2?'beat2':A.mbuf.beat1?'beat1':A.mbuf.beat2?'beat2':'';
@@ -339,8 +359,34 @@ function bgmUpdate(){
   const src=A.ctx.createBufferSource(); src.buffer=A.mbuf[want]; src.loop=true;
   const g=A.ctx.createGain(); g.gain.value=0.001;
   g.gain.setTargetAtTime(0.34,A.ctx.currentTime,0.25);   /* 효과음이 주인공 — 비트는 받쳐주는 볼륨 */
-  src.connect(g); g.connect(A.master); src.start();
+  src.connect(g); g.connect(A.master);
+  const tr=(A.mtrim&&A.mtrim[want])||{lead:0,end:src.buffer.duration};
+  src.loopStart=tr.lead; src.loopEnd=tr.end;           /* 무음 없는 구간만 루프 → 드리프트 방지 */
+  /* 앵커 = 첫 비트가 '귀에 닿는' pnow 시각 (출력 레이턴시 보정) */
+  const lat=A.ctx.outputLatency||A.ctx.baseLatency||0;
+  let when=A.ctx.currentTime+0.05, earAt=pnow()+0.05+lat;
+  if(A.bgmAnchor&&A.bgmBpm){                           /* 트랙 전환도 기존 박자선 위에서 */
+    const bl=60/A.bgmBpm;
+    const wait=(bl-(((earAt-A.bgmAnchor)%bl)+bl)%bl)%bl;
+    when+=wait; earAt+=wait;
+  }
+  src.start(when,tr.lead);
+  A.bgmAnchor=earAt; A.bgmBpm=A.MUSIC_BPM[want]||90;
   A.bgm={src,g}; A.bgmKey=want;
+}
+function boilUpdate(){
+  if(!A.ctx) return;
+  const want=G.state==='game'&&!A.muted&&A.buf.boil;
+  if(want&&!A.boil){
+    const src=A.ctx.createBufferSource(); src.buffer=A.buf.boil; src.loop=true;
+    const g=A.ctx.createGain(); g.gain.value=0.001;
+    g.gain.setTargetAtTime(0.14,A.ctx.currentTime,0.5);   /* 배경에 깔리는 보글보글 */
+    src.connect(g); g.connect(A.master); src.start();
+    A.boil={src,g};
+  }else if(!want&&A.boil){
+    try{ A.boil.g.gain.setTargetAtTime(0,A.ctx.currentTime,0.3); A.boil.src.stop(A.ctx.currentTime+1); }catch(e){}
+    A.boil=null;
+  }
 }
 function bgmDuck(){                                      /* 사이드체인: 버튼 소리 순간 비트가 눌림 */
   if(!A.bgm) return;
@@ -396,23 +442,25 @@ const G = {
   score:0, lives:3, combo:0, maxCombo:0, bowls:0, orderCount:0, perfectOrders:0,
   best:+(localStorage.getItem('djr_best')||0), newBest:false,
   bpm:96, notes:[], noteIdx:0, cursorT:0, curOrderNo:0,
-  fever:false, comboT:-9, dmg:0, dying:0, eat:null, drop:0, dropT0:0, tut:false,
+  fever:false, comboT:-9, dmg:0, dying:0, eat:null, drop:0, dropT0:0, tut:false, diff:0,
   fx:[], toasts:[], confetti:[],
   shake:0, flash:0, flashCol:[255,255,255],
   bg:hex2rgb('#F5B31B'),
   padRects:[], padPress:{}, btnRects:{}
 };
-const diffMult=()=>1+(G.bpm-86)/50;
-function windows(){ let l = clamp(1.5 - (G.bpm-86)/120, 0.85, 1.5);
+const diffMult=()=>1+(G.diff||0)*1.5;
+function windows(){ let l = clamp(1.5 - 0.65*(G.diff||0), 0.85, 1.5);
   if(G.tut) l*=1.35;                               /* 연습 주문은 아주 관대하게 */
   return { p:0.09*l, g:0.18*l, b:0.27*l }; }
 
 function orderParams(no){
-  const bpm = Math.min(86+(no-1)*1.8, 160);        /* 아주 완만하게 — 일반인 기준 */
+  /* 음악이 있으면 노트도 음악 BPM 그대로 — 난이도는 밀도로 올린다 */
+  const mkey=A.bgmKey||(A.mbuf&&(A.mbuf.beat1?'beat1':A.mbuf.beat2?'beat2':''))||'';
+  const bpm = mkey ? A.MUSIC_BPM[mkey] : Math.min(86+(no-1)*1.8, 160);
   const r=Math.random();
   const secN = no<=14?1 : no<=20?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
   const mx = no<=8?2 : no<=14?3 : 4;
-  const tap = no<20?1 : no<28?0.72 : 0.62;         /* 더블타임은 20주문부터 */
+  const tap = no<20?1 : 0.5;                       /* 더블타임도 정확히 반박자 그리드 */
   return {bpm, secN, mn:1, mx, tap};
 }
 function pushOrder(){
@@ -426,8 +474,13 @@ function pushOrder(){
   if(no>=3 && Math.random()<0.38){ secs.push('jjaguri'); pool=pool.filter(f=>f!=='jjapa'&&f!=='neogury'); }
   while(secs.length<p.secN && pool.length) secs.push(pool.splice(irand(0,pool.length-1),1)[0]);
   if(!secs.length) secs.push('ramyun');
-  const gap = Math.max(1.8, 4.4 - no*0.13);        /* 초반엔 사운드 감상 타임, 천천히 조여짐 */
+  G.diff=Math.min(1,(no-1)/26);                    /* 난이도 지표 (판정창·점수 배율) */
+  const gap = Math.max(2, Math.round(4.4 - no*0.13));  /* 정수 박자 → 그리드 유지 */
   let t=G.cursorT;
+  if(A.bgmAnchor&&A.bgmBpm){                       /* 음악 박자선에 스냅 */
+    const bl=60/A.bgmBpm;
+    t=A.bgmAnchor+Math.ceil((t-A.bgmAnchor)/bl-1e-4)*bl;
+  }
   for(const f of secs){
     if(f==='jjaguri'){
       const n=irand(1,2);                          /* 짜파구리 1개=짜파1+너1 · 2개=짜파2+너2 */
@@ -444,7 +497,7 @@ function pushOrder(){
     G.notes.push({type:'play',flavor:f,sec:f,time:t,order,bpm:p.bpm}); t+=spb*gap;
   }
   G.notes[G.notes.length-1].last=true;
-  G.cursorT=t+spb*1.2;
+  G.cursorT=t+spb;
 }
 function setState(s){ G.state=s; G.stateT=G.time; if(s!=='game'&&A.ctx) bgmStop(); }
 function startGame(){
@@ -455,10 +508,10 @@ function startGame(){
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
   G.pStreak=0;
-  pushOrder(); pushOrder();
-  spawnFX({kind:'artslam',art:'t_letsgo',t0:G.time+0.4});
-  if(A.ctx){ A.nextBeat=anow()+0.05; A.beatN=0; }
   setState('game');
+  if(A.ctx){ A.nextBeat=anow()+0.05; A.beatN=0; bgmUpdate(); }   /* 먼저 비트를 걸고 */
+  pushOrder(); pushOrder();                                       /* 그 그리드 위에 주문 생성 */
+  spawnFX({kind:'artslam',art:'t_letsgo',t0:G.time+0.4});
 }
 
 /* ---------- judgment ---------- */
@@ -2335,7 +2388,7 @@ function drawAttract(){
     comicText('GAME START',SW/2,SH*0.83,SW*0.07,'#ff4a2a');
   txt('탭 또는 아무 키나 눌러 시작!',SW/2,SH*0.878,SW*0.03,'rgba(255,255,255,0.8)');
   if(G.best>0){ ledTxt(`BEST ${String(G.best).padStart(7,'0')}`,SW/2,SH*0.92,SW*0.028,'center'); }
-  txt('DJ Ramyun by 808hertz®',SW/2,SH*0.962,SW*0.026,'rgba(255,255,255,0.45)','center',F_ARCADE,'400');
+  txt('DJ Ramyun by 808hertz® · Made by O KWON',SW/2,SH*0.962,SW*0.024,'rgba(255,255,255,0.45)','center',F_ARCADE,'400');
   /* CRT scanlines */
   ctx.save(); ctx.globalAlpha=0.12; ctx.fillStyle='#000';
   for(let y=0;y<SH;y+=4) ctx.fillRect(0,y,SW,1.4);
@@ -2371,7 +2424,7 @@ function drawGameover(){
     txt(r_[1],SW*0.78,ry,SW*0.035,'#1c150c','right',F_SANS,'900');
   });
   SEQ.forEach((f,i)=>drawMascot(SW*(0.26+i*0.16),cy+ch*0.81,SH*0.04,f,'idle',G.time+i*0.3));
-  txt('DJ Ramyun by 808hertz — coming to Kickstarter',SW/2,cy+ch*0.9,SW*0.029,'#5c3a00','center',F_SANS,'800');
+  txt('DJ Ramyun by 808hertz® · Made by O KWON',SW/2,cy+ch*0.9,SW*0.029,'#5c3a00','center',F_SANS,'800');
 
   const bw=SW*0.4,bh=SH*0.06,by=cy+ch+SH*0.028;
   const bx1=SW/2-bw-SW*0.02,bx2=SW/2+SW*0.02;
@@ -2404,8 +2457,8 @@ function shareScore(){
   g.fillText(`${G.bowls}그릇 서빙 · PERFECT ${G.perfectOrders} · MAX COMBO ×${G.maxCombo}`,540,760);
   g.font=`250px ${F_SANS}`; g.fillText('🍜',540,1040);
   g.font=`44px ${F_SANS}`; g.fillStyle='#5c3a00';
-  g.fillText('DJ Ramyun by 808hertz',540,1170);
-  g.fillText('coming to Kickstarter',540,1230);
+  g.fillText('DJ Ramyun by 808hertz®',540,1170);
+  g.fillText('Made by O KWON',540,1230);
   c.toBlob(async b=>{
     if(!b) return;
     const file=new File([b],'dj-ramyun-score.png',{type:'image/png'});
@@ -2492,6 +2545,7 @@ window.DJ={G,A,T3,anow:()=>anow(),pnow:()=>pnow(),noShift:false,padTap:(p)=>padT
   forceState:(s)=>{G.state=s;G.stateT=G.time;},step:()=>frame(performance.now())};
 
 resize();
+initAudio();   /* suspended 상태로 미리 생성 — 디코딩은 가능, 소리는 첫 터치에 resume */
 init3D();
 requestAnimationFrame(loop);
 /* fallback ticker — keeps the game alive at ~30fps if rAF is throttled (webview/panel) */
