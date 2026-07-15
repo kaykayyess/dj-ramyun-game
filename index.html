@@ -44,7 +44,7 @@ const FLAVORS = {
 };
 const SEQ = ['ramyun','buldak','jjapa','neogury'];
 const PADS = [
-  {key:'ramyun', label:'RAM'}, {key:'buldak', label:'BUL'},
+  {key:'ramyun', label:'RAM'}, {key:'buldak', label:'BURR'},
   {key:'jjapa',  label:'JJAP'}, {key:'neogury',label:'NEO'}, {key:'play', label:'PLAY'}
 ];
 /* street-hip customer cast — rapper-inspired, BAPE-figure mood (닮았지만 다른) */
@@ -377,7 +377,8 @@ for(const k in ART_FILES){
 }
 function drawArt(k,x,y,h,alpha=1){          /* h=박스 높이. 로드 전이면 false → 텍스트 폴백 */
   const im=ART[k]; if(!im) return false;
-  const w=h*(im.width/im.height);
+  let w=h*(im.width/im.height);
+  if(w>SW*0.96){ h*=SW*0.96/w; w=SW*0.96; }  /* 화면 폭 넘침 방지 */
   ctx.save(); ctx.globalAlpha*=alpha;
   ctx.drawImage(im,x-w/2,y-h/2,w,h);
   ctx.restore();
@@ -1169,7 +1170,7 @@ function init3D(){
     S.quadraticCurveTo(1.52,1.05,1.32,1.05);
     S.closePath();
     const deck=new THREE.Mesh(
-      new THREE.ExtrudeGeometry(S,{depth:0.24,bevelEnabled:true,bevelThickness:0.05,bevelSize:0.05,bevelSegments:4,curveSegments:64}),
+      new THREE.ExtrudeGeometry(S,{depth:0.35,bevelEnabled:true,bevelThickness:0.05,bevelSize:0.05,bevelSegments:4,curveSegments:64}),
       new THREE.MeshPhysicalMaterial({color:0xF7A21B,roughness:0.34,metalness:0.02,   /* 찐한 망고 옐로우 */
         clearcoat:0.65,clearcoatRoughness:0.24,envMapIntensity:0.85}));
     deck.rotation.x=-Math.PI/2; deck.position.y=0.05;
@@ -1193,7 +1194,7 @@ function init3D(){
     const black=new THREE.MeshStandardMaterial({color:0x131110,roughness:0.45});
     const lp=new THREE.Mesh(new THREE.CylinderGeometry(0.98,0.98,0.05,64),   /* LP가 몸체 곡선에 거의 붙는다 */
       [black,new THREE.MeshStandardMaterial({map:lpTex.t,roughness:0.3,envMapIntensity:0.7}),black]);
-    lp.position.set(0,0.37,0);
+    lp.position.set(0,0.48,0);
     lp.castShadow=true; lp.receiveShadow=true;
     T3.root.add(lp); T3.lp=lp;
 
@@ -1201,14 +1202,14 @@ function init3D(){
     T3.heatRing=new THREE.Mesh(new THREE.RingGeometry(0.58,0.94,48),
       new THREE.MeshBasicMaterial({color:0xff4a10,transparent:true,opacity:0,
         blending:THREE.AdditiveBlending,depthWrite:false}));
-    T3.heatRing.rotation.x=-Math.PI/2; T3.heatRing.position.y=0.402;
+    T3.heatRing.rotation.x=-Math.PI/2; T3.heatRing.position.y=0.512;
     T3.root.add(T3.heatRing);
     T3.heatLight=new THREE.PointLight(0xff5a1a,0,4.5);
-    T3.heatLight.position.set(0,0.7,0);
+    T3.heatLight.position.set(0,0.81,0);
     T3.root.add(T3.heatLight);
 
     /* --- pot (cooking) — scales with servings, fills as you play --- */
-    const pot=new THREE.Group(); pot.position.set(0,0.40,0); T3.root.add(pot); T3.pot=pot;
+    const pot=new THREE.Group(); pot.position.set(0,0.51,0); T3.root.add(pot); T3.pot=pot;
     T3.potTarget=1; T3.potS=1; T3.plop=0;
     const yellowM=new THREE.MeshPhysicalMaterial({color:0xEDA51A,roughness:0.26,metalness:0.02,
       clearcoat:0.8,clearcoatRoughness:0.18,envMapIntensity:1,side:THREE.DoubleSide});
@@ -1341,7 +1342,7 @@ function init3D(){
     T3.led=mkTex(512,128,()=>{});
     const led=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.15),
       new THREE.MeshBasicMaterial({map:T3.led.t,transparent:true}));
-    led.rotation.x=-Math.PI/2; led.position.set(1.06,0.345,-0.4);
+    led.rotation.x=-Math.PI/2; led.position.set(1.06,0.455,-0.4);
     T3.root.add(led);
 
     /* --- flavor icon column printed on the deck (product layout) --- */
@@ -1359,7 +1360,7 @@ function init3D(){
     T3.iconsRedraw=()=>{ drawIconCol(icons.c.getContext('2d')); icons.t.needsUpdate=true; };
     const iconCol=new THREE.Mesh(new THREE.PlaneGeometry(0.24,0.56),
       new THREE.MeshBasicMaterial({map:icons.t,transparent:true}));
-    iconCol.rotation.x=-Math.PI/2; iconCol.position.set(1.06,0.343,0.02);   /* 우측 세로열 (실물 위치) */
+    iconCol.rotation.x=-Math.PI/2; iconCol.position.set(1.06,0.453,0.02);   /* 우측 세로열 (실물 위치) */
     T3.root.add(iconCol);
 
     /* --- TIMER / LOCK prints --- */
@@ -1375,7 +1376,7 @@ function init3D(){
     });
     const tlM=new THREE.Mesh(new THREE.PlaneGeometry(0.3,0.113),
       new THREE.MeshBasicMaterial({map:tl.t,transparent:true}));
-    tlM.rotation.x=-Math.PI/2; tlM.position.set(0.82,0.343,0.71);   /* PLAY 아래-왼쪽 (실물 위치) */
+    tlM.rotation.x=-Math.PI/2; tlM.position.set(0.82,0.453,0.71);   /* PLAY 아래-왼쪽 (실물 위치) */
     T3.root.add(tlM);
 
     /* --- round play button + white light ring (as on the product) --- */
@@ -1385,27 +1386,27 @@ function init3D(){
        new THREE.MeshBasicMaterial({map:pb.t,transparent:true}),
        new THREE.MeshStandardMaterial({color:0x111111})]);
     playBtn.rotation.y=Math.PI/2;      /* cap UV maps image-right to +z — rotate so the arrow points +x (screen right) */
-    playBtn.position.set(1.11,0.36,0.47); T3.root.add(playBtn);
+    playBtn.position.set(1.11,0.47,0.47); T3.root.add(playBtn);
     const ring=new THREE.Mesh(new THREE.TorusGeometry(0.175,0.014,10,40),
       new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45}));
-    ring.rotation.x=Math.PI/2; ring.position.set(1.11,0.375,0.47);
+    ring.rotation.x=Math.PI/2; ring.position.set(1.11,0.485,0.47);
     T3.root.add(ring); T3.playRing=ring;
     const glowTex=mkTex(128,128,(g)=>{ const gr=g.createRadialGradient(64,64,6,64,64,62);
       gr.addColorStop(0,'rgba(255,255,255,0.9)'); gr.addColorStop(1,'rgba(255,255,255,0)');
       g.fillStyle=gr; g.fillRect(0,0,128,128); });
     T3.playGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex.t,transparent:true,opacity:0,depthWrite:false}));
-    T3.playGlow.position.set(1.11,0.5,0.47); T3.playGlow.scale.set(0.8,0.8,1);
+    T3.playGlow.position.set(1.11,0.61,0.47); T3.playGlow.scale.set(0.8,0.8,1);
     T3.root.add(T3.playGlow);
 
     /* --- front face: Human touch tech® 인쇄 + ridged knob with tick marks (실물 전면) --- */
     const logo=mkTex(512,96,(g)=>{
-      g.font='700 46px Arial'; g.fillStyle='#241606';
+      g.font='700 52px Arial'; g.fillStyle='#241606';
       g.textAlign='center'; g.textBaseline='middle';
-      g.fillText('Human touch tech®',256,48);
+      g.fillText('808hertz®',256,48);
     });
-    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.66,0.124),
+    const logoM=new THREE.Mesh(new THREE.PlaneGeometry(0.55,0.115),
       new THREE.MeshBasicMaterial({map:logo.t,transparent:true}));
-    logoM.position.set(0.55,0.17,1.106);
+    logoM.position.set(0.55,0.22,1.106);
     T3.root.add(logoM);
     const ticks=mkTex(128,128,(g)=>{
       g.strokeStyle='#241606'; g.lineWidth=5; g.lineCap='round';
@@ -1416,20 +1417,18 @@ function init3D(){
     });
     const tickM=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.34),
       new THREE.MeshBasicMaterial({map:ticks.t,transparent:true}));
-    tickM.position.set(1.22,0.19,1.106);
+    tickM.position.set(1.22,0.24,1.106);
     T3.root.add(tickM);
     const knob=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.12,28),
       new THREE.MeshStandardMaterial({color:0x17130f,roughness:0.4}));
-    knob.rotation.x=Math.PI/2; knob.position.set(1.22,0.19,1.13);
+    knob.rotation.x=Math.PI/2; knob.position.set(1.22,0.24,1.13);
     T3.root.add(knob);
 
     /* --- 우상단 망고 노브 (실물의 원형 캡) --- */
-    const knobTopM=new THREE.MeshPhysicalMaterial({color:0xF9A825,roughness:0.3,metalness:0.02,
+    const knobTopM=new THREE.MeshPhysicalMaterial({color:0xF9A825,roughness:0.28,metalness:0.02,
       clearcoat:0.7,clearcoatRoughness:0.2,envMapIntensity:0.9});
-    const knobTop=new THREE.Mesh(new THREE.CylinderGeometry(0.155,0.165,0.13,32),knobTopM);
-    knobTop.position.set(1.06,0.4,-0.67); knobTop.castShadow=true; T3.root.add(knobTop);
-    const knobCap=new THREE.Mesh(new THREE.CylinderGeometry(0.105,0.105,0.05,28),knobTopM);
-    knobCap.position.set(1.06,0.48,-0.67); T3.root.add(knobCap);
+    const knobTop=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.16,36),knobTopM);   /* 매끈한 1단 */
+    knobTop.position.set(1.06,0.53,-0.67); knobTop.castShadow=true; T3.root.add(knobTop);
 
     /* --- steam sprites --- */
     const st=mkTex(128,128,(g)=>{ const gr=g.createRadialGradient(64,64,6,64,64,62);
@@ -2599,9 +2598,9 @@ function drawEat(){
       ctx.stroke();
     }
     /* wobbling slurp title */
-    ctx.save(); ctx.translate(SW*0.74,cy-SH*0.118); ctx.rotate(Math.sin(t*7)*0.05);
+    ctx.save(); ctx.translate(SW*0.70,cy-SH*0.125); ctx.rotate(Math.sin(t*7)*0.05);
     const slk=['t_slurp','t_slurp2','t_chop'][G.bowls%3];   /* 그릇마다 다른 먹방 타이포 */
-    if(!drawArt(slk,0,0,SH*0.105)) txtO(i18n('slurp'),0,0,SW*0.042,'#fff','rgba(20,10,0,0.85)',SW*0.009);
+    if(!drawArt(slk,0,0,SH*0.21)) txtO(i18n('slurp'),0,0,SW*0.08,'#fff','rgba(20,10,0,0.85)',SW*0.016);
     ctx.restore();
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
@@ -2769,7 +2768,7 @@ function drawAttract(){
       ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(2.4,-2.4); ctx.lineTo(0,-8); ctx.lineTo(-2.4,-2.4); ctx.closePath(); ctx.fill(); }
     ctx.restore();
   }
-  if(!drawArt('t_sesh',SW/2,SH*0.345,SH*0.17)) txt('Time for a cookin’ sesh!',SW/2,SH*0.32,SW*0.045,'#ffe95e','center',F_SANS,'800');
+  if(!drawArt('t_sesh',SW/2,SH*0.35,SH*0.34)) txt('Time for a cookin’ sesh!',SW/2,SH*0.33,SW*0.09,'#ffe95e','center',F_SANS,'800');
 
   if(!T3.ok) draw2DDeckFallback(SW/2,SH*0.47,SW*0.62);
 
@@ -2785,7 +2784,7 @@ function drawAttract(){
   txt(i18n('start_hint'),SW/2,SH*0.878,SW*0.03,'rgba(255,255,255,0.8)');
   if(G.best>0){ ledTxt(`BEST ${String(G.best).padStart(7,'0')}`,SW/2,SH*0.92,SW*0.028,'center'); }
   txt('DJ Ramyun by 808hertz®',SW/2,SH*0.958,SW*0.026,'rgba(255,255,255,0.45)','center',F_ARCADE,'400');
-  txt('game by O KWON',SW/2,SH*0.985,SW*0.015,'rgba(255,255,255,0.22)','center',F_SANS,'600');
+  txt('Game produced by OKWON',SW/2,SH*0.985,SW*0.016,'rgba(255,255,255,0.6)','center',F_ARCADE,'400');
   /* 🌐 언어 전환 pill (우상단) */
   {
     const ltxt='🌐 '+I18N_NAMES[LANG];
@@ -2842,7 +2841,7 @@ function drawGameover(){
   txt(i18n('prize_23'),SW/2,ey0+eh*0.79,SW*0.026,'rgba(255,255,255,0.85)','center',F_SANS,'700');
   SEQ.forEach((f,i)=>drawMascot(SW*(0.26+i*0.16),cy+ch*0.845,SH*0.036,f,'idle',G.time+i*0.3));
   txt('DJ Ramyun by 808hertz®',SW/2,cy+ch*0.9,SW*0.029,'#5c3a00','center',F_SANS,'800');
-  txt('game by O KWON',SW/2,cy+ch*0.95,SW*0.018,'rgba(92,58,0,0.5)','center',F_SANS,'700');
+  txt('Game produced by OKWON',SW/2,cy+ch*0.95,SW*0.019,'rgba(92,58,0,0.85)','center',F_SANS,'800');
 
   const bw=SW*0.4,bh=SH*0.06,by=cy+ch+SH*0.028;
   const bx1=SW/2-bw-SW*0.02,bx2=SW/2+SW*0.02;
@@ -2880,8 +2879,8 @@ function shareScore(){
   g.font=`250px ${F_SANS}`; g.fillText('🍜',540,1040);
   g.font=`44px ${F_SANS}`; g.fillStyle='#5c3a00';
   g.fillText('DJ Ramyun by 808hertz®',540,1170);
-  g.font=`28px ${F_SANS}`; g.fillStyle='rgba(92,58,0,0.55)';
-  g.fillText('game by O KWON',540,1225);
+  g.font=`800 32px ${F_SANS}`; g.fillStyle='rgba(92,58,0,0.85)';
+  g.fillText('Game produced by OKWON',540,1225);
   c.toBlob(async b=>{
     if(!b) return;
     const file=new File([b],'dj-ramyun-score.png',{type:'image/png'});
