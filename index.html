@@ -287,7 +287,10 @@ function scratchFX(){
 }
 function slurpFX(){
   const ks=['slurp1','slurp2','slurp3'].filter(k=>A.buf[k]);
-  if(ks.length&&playBuf(ks[irand(0,ks.length-1)],0.95,1,{group:'slurp'})) return;
+  if(ks.length){
+    A.slurpIdx=((A.slurpIdx||0)+1)%ks.length;          /* 매 그릇 다른 후루룹 — 로테이션 */
+    if(playBuf(ks[A.slurpIdx],1.0,1,{group:'slurp'})) return;
+  }
   if(!A.ctx)return; const t=anow();
   for(let i=0;i<3;i++){ const tt=t+i*0.2;
     noiseHit({t:tt,type:'bandpass',f0:600,f1:2400,q:2.2,dur:0.18,v:0.32});
@@ -570,7 +573,6 @@ function applyJudge(j,note){
     if(note.flavor==='jjaguri')        /* 짜파구리 전용 스팅어 (1개/2개) */
       played=playBuf('guri'+serv,vol*0.9,1,{group:'play'})||playBuf('jja'+serv,vol*0.9,1,{group:'play'});
     else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.9,1,{group:'play'});
-    playBuf('boil',0.14,1,{group:'boil',dur:2.4,skipSilence:true});   /* 완성 순간 보글~ 아주 살짝 */
     if(!played) dropFX(note.flavor,vol);
     G.flash=0.45; G.flashCol=hex2rgb(FLAVORS[note.flavor].color);
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
@@ -2280,9 +2282,10 @@ function drawEat(){
   ctx.restore();
 }
 function drawPads(R){
-  const gap=SW*0.02;
-  const playD=Math.min(R.padH*0.95,SW*0.23);   // round play button diameter
-  const w4=(SW-gap*6-playD)/4;
+  const gap=SW*0.016;
+  const cell=(SW-gap*6)/5;                     // 라면 패드도 플레이버튼과 같은 크기
+  const playD=Math.min(cell,R.padH*0.95);
+  const w4=cell;
   const depth=Math.max(5,SH*0.009);
   let x=gap;
   G.padRects=[];
@@ -2331,7 +2334,7 @@ function drawPads(R){
       ctx.save();
       ctx.fillStyle='rgba(0,0,0,0.45)';
       ctx.beginPath(); ctx.ellipse(cx+2,cy+6,rad,rad*0.96,0,0,7); ctx.fill();
-      ctx.fillStyle='#d99413';                    // deep mustard bezel like the deck
+      ctx.fillStyle='#2b2b30';                    // 실제 제품 버튼처럼 짙은 그레이 베젤
       ctx.beginPath(); ctx.arc(cx,cy,rad,0,7); ctx.fill();
       if(pr>0){ ctx.shadowColor='#fff'; ctx.shadowBlur=34*pr; }
       ctx.strokeStyle=`rgba(255,255,255,${0.4+0.6*pr})`;
