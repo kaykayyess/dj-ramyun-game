@@ -124,7 +124,8 @@ const SFX_FILES={
   bul1:'BURR Play.wav', bul2:'BURR2 Play.wav', bul3:'BURR3 Play.wav', bul4:'BURR4 Play.wav',
   jja1:'JJAP Play.wav', jja2:'JJAP2 Play.wav', jja3:'JJAP3 Play.wav', jja4:'JJAP4 Play.wav',
   neo1:'NEO Play.wav',  neo2:'NEO2 Play.wav',  neo3:'NEO3 Play.wav', neo4:'NEO4 Play.wav',
-  drop_voice:'BURR_JJPA drop_the_sauce_and_feast.mp3'
+  drop_voice:'BURR_JJPA drop_the_sauce_and_feast.mp3',
+  guri1:'jjapagury play.mp3', guri2:'jjapagury2 play.mp3'
 };
 for(const k in SFX_FILES)          /* prefetch at load — decode after first tap unlocks audio */
   fetch('sfx/'+encodeURIComponent(SFX_FILES[k]))
@@ -154,9 +155,14 @@ function playBuf(k,v=1,rate=1,o={}){
     if(prev){ try{ prev.g.gain.setTargetAtTime(0,t,0.14); prev.src.stop(t+0.9); }catch(e){} }   /* 중첩 순간에만 부드럽게 크로스페이드 */
   }
   const src=A.ctx.createBufferSource(); src.buffer=b; src.playbackRate.value=rate;
+  let off=0;
+  if(o.skipSilence){ A.lead=A.lead||{};
+    if(A.lead[k]===undefined){ const ch=b.getChannelData(0); let i=0;
+      while(i<ch.length&&Math.abs(ch[i])<0.02) i++; A.lead[k]=i/b.sampleRate; }
+    off=A.lead[k]; }
   const vv=v*((A.norm&&A.norm[k])||1);
   const g=A.ctx.createGain(); g.gain.value=vv;
-  src.connect(g); g.connect(A.master); src.start();
+  src.connect(g); g.connect(A.master); src.start(0,off);
   if(k!=='drop_voice') bgmDuck();
   if(o.dur){                         /* trim long stingers with a clean fade */
     g.gain.setValueAtTime(vv,t+Math.max(0.05,o.dur-0.3));
@@ -350,7 +356,7 @@ function bgmStop(){
 }
 function bgmUpdate(){
   if(!A.ctx){ return; }
-  boilUpdate();
+  if(A.boil){ try{ A.boil.g.gain.setTargetAtTime(0,A.ctx.currentTime,0.2); A.boil.src.stop(A.ctx.currentTime+0.8); }catch(e){} A.boil=null; }
   if(A.muted) return;
   if(G.state!=='game'){ if(A.bgm) bgmStop(); return; }
   for(const k in A.mraw) decodeBGM(k);
@@ -561,9 +567,10 @@ function applyJudge(j,note){
   if(note.type==='play'){
     const serv=clamp(note.order.counts[note.sec||note.flavor]||1,1,4);
     let played=false;
-    if(note.flavor==='jjaguri')        /* 임시: 전용 파일 나올 때까지 JJAP 하나만 깔끔하게 */
-      played=playBuf('jja'+serv,vol*0.9,1,{group:'play'});
+    if(note.flavor==='jjaguri')        /* 짜파구리 전용 스팅어 (1개/2개) */
+      played=playBuf('guri'+serv,vol*0.9,1,{group:'play'})||playBuf('jja'+serv,vol*0.9,1,{group:'play'});
     else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.9,1,{group:'play'});
+    playBuf('boil',0.14,1,{group:'boil',dur:2.4,skipSilence:true});   /* 완성 순간 보글~ 아주 살짝 */
     if(!played) dropFX(note.flavor,vol);
     G.flash=0.45; G.flashCol=hex2rgb(FLAVORS[note.flavor].color);
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
@@ -1028,15 +1035,16 @@ function init3D(){
     T3.noodleTubes=[];
     const noodleM=new THREE.MeshStandardMaterial({color:0xF6D468,roughness:0.34,envMapIntensity:0.55});
     T3.noodleMat=noodleM;
-    for(let i=0;i<16;i++){
-      const a0=rand(0,6.3), rad=0.09+ (i%4)*0.075 + rand(-0.02,0.02);
-      const pts=[]; for(let k=0;k<=6;k++){
-        const a=a0+k*1.02;
-        pts.push(new THREE.Vector3(Math.cos(a)*rad+rand(-0.04,0.04),
-          0.35+Math.sin(k*2.2+i)*0.022+(i%3)*0.012,
-          Math.sin(a)*rad+rand(-0.04,0.04)));
+    for(let i=0;i<26;i++){
+      const a0=rand(0,6.3), rad=0.08+ (i%5)*0.062 + rand(-0.02,0.02);
+      const pts=[]; for(let k=0;k<=11;k++){
+        const a=a0+k*0.62;
+        const rw=rad+Math.sin(k*3.1+i*1.7)*0.028;          /* 꼬불꼬불 지그재그 */
+        pts.push(new THREE.Vector3(Math.cos(a)*rw+rand(-0.02,0.02),
+          0.35+Math.sin(k*3.4+i)*0.018+(i%3)*0.01,
+          Math.sin(a)*rw+rand(-0.02,0.02)));
       }
-      const tube=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),26,0.027,6,false),noodleM);
+      const tube=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),44,0.013,5,false),noodleM);
       tube.scale.setScalar(0.001); tube.userData.tgt=0.001;
       T3.noodles.add(tube); T3.noodleTubes.push(tube);
     }
@@ -1084,7 +1092,7 @@ function init3D(){
       pot.add(b); T3.bubbles.push(b);
     }
     /* cooking API used by the game logic */
-    T3.addNoodle=()=>{ for(let k=0;k<3;k++){ const t=T3.noodleTubes.find(n=>n.userData.tgt<0.5);
+    T3.addNoodle=()=>{ for(let k=0;k<5;k++){ const t=T3.noodleTubes.find(n=>n.userData.tgt<0.5);
       if(t) t.userData.tgt=1; } T3.plop=1; };  /* 3 strands per tap — servings read clearly */
     T3.showTop=(f)=>{
       if(f==='jjaguri'){ T3.tops.jjapa.userData.tgt=1; T3.tops.neogury.userData.tgt=1; }
@@ -1094,7 +1102,7 @@ function init3D(){
       for(const k in T3.tops) T3.tops[k].userData.tgt=0.001; };
     T3.setPotFor=(serv)=>{ T3.potTarget=[0.78,1.15,1.6,2.15][clamp(serv||1,1,4)-1]; }; /* 1인분 0.78 → 4인분 2.15 (기계를 덮는다) */
     /* attract screen shows an appetizing full pot */
-    for(let i=0;i<9;i++) T3.noodleTubes[i].userData.tgt=1;
+    for(let i=0;i<15;i++) T3.noodleTubes[i].userData.tgt=1;
     T3.tops.ramyun.userData.tgt=1;
     /* pot label — DJ Ramyun sticker logo (gold oval · red bubble letters) */
     const drawLbl=(g)=>{
@@ -2154,7 +2162,7 @@ function drawMiniBowl(x,y,w,fk,t,tilt){
     ctx.beginPath(); ctx.ellipse(0,-h*0.3,w*0.43,h*0.12,0,0,7); ctx.fill();
   }
   ctx.strokeStyle=dryB?(fk==='jjapa'?'#7A4A20':'#E8843C'):'#F6D468';
-  ctx.lineWidth=w*(dryB?0.055:0.045); ctx.lineCap='round';
+  ctx.lineWidth=w*(dryB?0.034:0.028); ctx.lineCap='round';
   for(let i=-1;i<=(dryB?2:1);i++){
     const nx=i*w*0.12, wob=Math.sin(t*5+i*1.7)*w*0.03;
     ctx.beginPath();
@@ -2204,14 +2212,14 @@ function drawEat(){
     const L=R*2.3*grow*(1-eatP);
     if(L>R*0.08){
       ctx.lineCap='round';
-      for(let i=0;i<7;i++){
-        const sx=(i-3)*R*0.05;
+      for(let i=0;i<10;i++){
+        const sx=(i-4.5)*R*0.038;
         const li=L*(0.72+((i*37)%10)/10*0.38);
-        ctx.strokeStyle=i%2?'#F6D468':'#EEC348'; ctx.lineWidth=R*0.08;
+        ctx.strokeStyle=i%2?'#F6D468':'#EEC348'; ctx.lineWidth=R*0.045;
         ctx.beginPath();
         for(let k=0;k<=14;k++){
           const u=k/14;
-          const wob=Math.sin(u*9.5+i*1.9+t*7)*R*0.15*Math.sin(u*Math.PI)*(1-eatP*0.6);  /* 꼬불꼬불 */
+          const wob=Math.sin(u*14+i*1.9+t*7)*R*0.16*Math.sin(u*Math.PI)*(1-eatP*0.6);  /* 꼬불꼬불 */
           const px=pin.x+sx*(0.4+u*1.3)+wob;
           const py=pin.y+li*u+Math.sin(u*6+i)*R*0.02;
           k?ctx.lineTo(px,py):ctx.moveTo(px,py);
