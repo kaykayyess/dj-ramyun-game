@@ -1646,17 +1646,18 @@ function update3D(dt){
   if(T3.qSlots){
     const want=[];
     if(G.state==='game'){
+      /* 처음엔 지금 손님 딱 1명 — 인기가 쌓여야 줄이 생긴다 (도파민 성장 곡선) */
+      const cap=Math.min(6,1+(G.hypeLv||0)+(G.orderCount>=12?1:0)+(G.orderCount>=24?1:0));
       const seen=new Set();
-      for(let i=G.noteIdx;i<G.notes.length&&want.length<3;i++){
+      for(let i=G.noteIdx;i<G.notes.length&&want.length<Math.min(3,cap);i++){
         const o=G.notes[i].order;
         if(!seen.has(o.no)){ seen.add(o.no); want.push(o.customer); }
       }
-      /* 맛집 소문: 소문 단계만큼 손님이 줄에 붙는다 */
-      const hype=G.hypeLv||0;
-      const extra=Math.min(3,Math.max(hype,Math.max(0,((G.orderCount-2)/8)|0)));
+      /* 남는 자리는 소문 듣고 온 구경꾼으로 */
+      const extra=Math.min(3,Math.max(0,cap-want.length));
       const EX=['jay','tay','em','lisa','posty','bey','nigo','phril'];
       for(let k=0;k<extra;k++) want.push(EX[(k*2+1)%EX.length]);
-      T3.hype=hype;
+      T3.hype=G.hypeLv||0;
     }
     T3.qSlots.forEach((sl,i)=>{
       const ty=want[i]||null;
