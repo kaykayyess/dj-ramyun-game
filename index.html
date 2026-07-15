@@ -526,7 +526,7 @@ function startGame(){
   G.score=0; G.lives=3; G.combo=0; G.maxCombo=0; G.bowls=0; G.orderCount=0; G.perfectOrders=0;
   G.notes=[]; G.noteIdx=0; G.bpm=96; G.fever=false; G.dying=0; G.newBest=false;
   G.fx.length=0; G.toasts.length=0; G.confetti.length=0; G.curOrderNo=0; G.curSection=''; G.eat=null; G.drop=0; G.dropT0=0;
-  G.tut=!localStorage.getItem('djr_tut2');
+  G.tut=!window.__tutDone;   /* 접속마다 첫 판은 연습 손님 — 같은 세션 재도전은 생략 */
   G.scroll=0.27;         /* 첫 판이면 1번 주문 = 연습 모드 */
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
@@ -619,7 +619,7 @@ function domOf(order){
 function finishOrder(order){
   const ratio=order.hit/order.total;
   if(T3.ok) T3.serveClear();   // the pot is emptied — bowl handed to the customer
-  if(G.tut&&order.no===1){ G.tut=false; localStorage.setItem('djr_tut2','1');
+  if(G.tut&&order.no===1){ G.tut=false; window.__tutDone=true;
     spawnFX({kind:'banner',text:'🍜 첫 그릇 완성! 맛집 소문내러 갑시다~!!',t0:G.time}); }
   if(order.miss===0){
     const b=Math.round(1000*diffMult())*(G.fever?2:1);
