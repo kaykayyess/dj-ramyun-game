@@ -199,7 +199,7 @@ function noiseHit(o){
   src.connect(f); f.connect(g); g.connect(A.master);
   src.start(t); src.stop(t+dur+0.05);
 }
-const kick =(t,v=0.5)=>tone({t,type:'sine',f0:150,f1:45,gt:0.09,dur:0.16,v});
+const kick =(t,v=0.5)=>{tone({t,type:'sine',f0:160,f1:40,gt:0.1,dur:0.22,v});noiseHit({t,type:'lowpass',f0:900,dur:0.02,v:v*0.22});};
 const hat  =(t,v=0.1)=>noiseHit({t,type:'highpass',f0:7500,dur:0.035,v});
 const snare=(t,v=0.3)=>{noiseHit({t,type:'bandpass',f0:1900,q:0.6,dur:0.12,v});tone({t,type:'triangle',f0:200,f1:150,dur:0.09,v:v*0.7});};
 const clap =(t,v=0.25)=>{for(let i=0;i<3;i++)noiseHit({t:t+i*0.012,type:'bandpass',f0:1300,q:1.4,dur:0.05,v:v*(1-i*0.2)});};
@@ -286,12 +286,33 @@ function schedulerUpdate(){
   const spb=60/G.bpm;
   if(A.nextBeat < anow()-0.4) A.nextBeat = anow()+0.05;
   while(A.nextBeat < anow()+0.18){
-    const t=A.nextBeat, n=A.beatN;
-    kick(t,0.42);
-    if(G.combo>=4){ hat(t,0.11); hat(t+spb/2,0.07); }
-    if(G.combo>=8 && n%2===1) snare(t,0.22);
-    if(G.combo>=14){ const sq=[55,55,65.4,49]; bassN(t,sq[n%4],spb*0.85,0.2); }
-    if(G.fever && n%4===0) clap(t,0.18);
+    const t=A.nextBeat, n=A.beatN, b=n%8, sw=spb*0.56;   /* 스윙 오프셋 */
+    /* 붐뱁 킥: 정박 + 엇박 */
+    if(b===0||b===2||b===5) kick(t,0.45);
+    if(b===3) kick(t+sw,0.3);
+    if(b===6&&(n>>3)%2===1) kick(t+spb/2,0.26);
+    /* 스윙 햇 + 고콤보 16비트 시즐 */
+    if(G.combo>=4){
+      hat(t,0.12); hat(t+sw,b%2?0.09:0.055);
+      if(G.combo>=30&&b%2===1) hat(t+spb*0.25,0.045);
+    }
+    /* 스네어 2·4박 + 고스트 노트 */
+    if(G.combo>=8){
+      if(b%2===1) snare(t,0.25);
+      if(b===6) snare(t+sw,0.08);
+    }
+    /* 베이스 — 현재 flavor 루트를 따라가는 펜타토닉 라인 */
+    if(G.combo>=14){
+      const root={ramyun:55,buldak:49,jjapa:41.2,neogury:46.2,jjaguri:43.7}[bgFlavor()]||55;
+      const mel=[1,0,1.5,0, 1,1.19,0,0.75][b];
+      if(mel) bassN(t,root*mel,spb*0.7,0.21);
+    }
+    if(G.fever&&b%4===0) clap(t,0.18);
+    /* 8박마다 바 마무리 필 */
+    if(b===7){
+      if(G.combo>=8){ snare(t+spb*0.5,0.11); snare(t+spb*0.75,0.16); }
+      noiseHit({t:t+spb*0.5,type:'highpass',f0:9000,dur:0.18,v:0.05});
+    }
     A.nextBeat+=spb; A.beatN++;
   }
 }
@@ -304,22 +325,23 @@ const G = {
   score:0, lives:3, combo:0, maxCombo:0, bowls:0, orderCount:0, perfectOrders:0,
   best:+(localStorage.getItem('djr_best')||0), newBest:false,
   bpm:96, notes:[], noteIdx:0, cursorT:0, curOrderNo:0,
-  fever:false, comboT:-9, dmg:0, dying:0, eat:null, drop:0, dropT0:0,
+  fever:false, comboT:-9, dmg:0, dying:0, eat:null, drop:0, dropT0:0, tut:false,
   fx:[], toasts:[], confetti:[],
   shake:0, flash:0, flashCol:[255,255,255],
   bg:hex2rgb('#F5B31B'),
   padRects:[], padPress:{}, btnRects:{}
 };
-const diffMult=()=>1+(G.bpm-96)/50;
-function windows(){ const l = clamp(1.3 - (G.bpm-96)/105, 0.7, 1.3);
+const diffMult=()=>1+(G.bpm-88)/50;
+function windows(){ let l = clamp(1.42 - (G.bpm-88)/110, 0.8, 1.42);
+  if(G.tut) l*=1.35;                               /* 연습 주문은 아주 관대하게 */
   return { p:0.09*l, g:0.18*l, b:0.27*l }; }
 
 function orderParams(no){
-  const bpm = Math.min(96+(no-1)*3, 184);          /* 완만하게, 그래도 꾸준히 */
+  const bpm = Math.min(88+(no-1)*2.5, 168);        /* 일반인 기준 완만한 곡선 */
   const r=Math.random();
-  const secN = no<=10?1 : no<=16?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 — 어려워져야 2개 이상 */
-  const mx = no<=5?2 : no<=10?3 : 4;
-  const tap = no<12?1 : no<18?0.65 : 0.55;         /* 더블타임은 12주문부터 */
+  const secN = no<=12?1 : no<=18?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
+  const mx = no<=6?2 : no<=12?3 : 4;
+  const tap = no<16?1 : no<24?0.7 : 0.6;           /* 더블타임은 16주문부터 */
   return {bpm, secN, mn:1, mx, tap};
 }
 function pushOrder(){
@@ -337,12 +359,11 @@ function pushOrder(){
   let t=G.cursorT;
   for(const f of secs){
     if(f==='jjaguri'){
-      const n=irand(2,Math.max(2,p.mx));           /* 2~4인분 */
-      const jj=Math.ceil(n/2), ne=n-jj;            /* 4→짜파2+너구리2 · 3→2+1 · 2→1+1 */
+      const n=irand(1,2);                          /* 짜파구리 1개=짜파1+너1 · 2개=짜파2+너2 */
       order.counts[f]=n; order.sections.push({key:f,n});
-      order.total+=n+1;
-      for(let i=0;i<jj;i++){ G.notes.push({type:'tap',flavor:'jjapa',sec:f,time:t,order,bpm:p.bpm}); t+=spb*p.tap; }
-      for(let i=0;i<ne;i++){ G.notes.push({type:'tap',flavor:'neogury',sec:f,time:t,order,bpm:p.bpm}); t+=spb*p.tap; }
+      order.total+=n*2+1;
+      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:'jjapa',sec:f,time:t,order,bpm:p.bpm}); t+=spb*p.tap; }
+      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:'neogury',sec:f,time:t,order,bpm:p.bpm}); t+=spb*p.tap; }
     }else{
       const n=irand(p.mn,p.mx);
       order.counts[f]=n; order.sections.push({key:f,n});
@@ -359,6 +380,7 @@ function startGame(){
   G.score=0; G.lives=3; G.combo=0; G.maxCombo=0; G.bowls=0; G.orderCount=0; G.perfectOrders=0;
   G.notes=[]; G.noteIdx=0; G.bpm=96; G.fever=false; G.dying=0; G.newBest=false;
   G.fx.length=0; G.toasts.length=0; G.confetti.length=0; G.curOrderNo=0; G.curSection=''; G.eat=null; G.drop=0; G.dropT0=0;
+  G.tut=!localStorage.getItem('djr_tut');         /* 첫 판이면 1번 주문 = 연습 모드 */
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
   pushOrder(); pushOrder();
@@ -392,7 +414,13 @@ function applyJudge(j,note){
     if(G.combo===8)  spawnFX({kind:'banner',text:'+ SNARE! 댄스타임!',t0:G.time});
     if(G.combo===14) spawnFX({kind:'banner',text:'+ BASSLINE!',t0:G.time});
     if(G.combo===20){ spawnFX({kind:'banner',text:'🔥 FEVER MODE ×2 🔥',t0:G.time}); feverFX(); }
-    if(G.combo>20 && G.combo%15===0) spawnFX({kind:'banner',text:['미쳤다!!','국물이 끓는다!!','면발 예술!!','DJ 등극!!'][irand(0,3)],t0:G.time});
+    if(G.combo>=25 && G.combo%25===0){             /* 25 단위 콤보 축포 */
+      G.flash=0.5; G.flashCol=[255,205,60];
+      G.shake=Math.max(G.shake,7);
+      spawnFX({kind:'banner',text:`⚡ COMBO ${G.combo}!! ${G.combo>=100?'라면의 신!!':G.combo>=75?'전설의 DJ!!':G.combo>=50?'국물 마스터!!':'면발 봉인해제!!'}`,t0:G.time});
+      feverFX();
+      for(let i=0;i<18;i++) G.confetti.push({x:SW*0.5+rand(-SW*0.22,SW*0.22),y:SH*0.38,vx:rand(-90,90),vy:rand(-190,-70),rot:rand(0,6.3),vr:rand(-5,5),c:['#F2C14E','#ffe95e','#fff','#E8431F'][i%4],s:rand(4,9)});
+    }
   }
   G.fever = G.combo>=20;
   judgeFX(j);
@@ -424,7 +452,8 @@ function applyJudge(j,note){
 }
 function markMiss(note,reason){
   note.judged='miss'; note.order.miss++;
-  G.combo=0; G.fever=false; G.lives--;
+  G.combo=0; G.fever=false;
+  if(!(G.tut&&note.order.no===1)) G.lives--;       /* 연습 주문은 하트가 안 닳는다 */
   G.dmg=1; G.shake=Math.max(G.shake,8); T3.shake3=1;
   scratchFX();
   const R=regions();
@@ -442,6 +471,8 @@ function domOf(order){
 function finishOrder(order){
   const ratio=order.hit/order.total;
   if(T3.ok) T3.serveClear();   // the pot is emptied — bowl handed to the customer
+  if(G.tut&&order.no===1){ G.tut=false; localStorage.setItem('djr_tut','1');
+    spawnFX({kind:'banner',text:'✨ 연습 끝 — 진짜 영업 시작!!',t0:G.time}); }
   if(order.miss===0){
     const b=Math.round(1000*diffMult())*(G.fever?2:1);
     G.score+=b; G.bowls++; G.perfectOrders++;
@@ -1556,7 +1587,7 @@ function drawNoteDisc(x,y,n,dNear){
     ctx.moveTo(x-r*0.22,y-r*0.26); ctx.lineTo(x-r*0.22,y+r*0.26); ctx.lineTo(x+r*0.14,y); ctx.closePath(); ctx.fill();
     ctx.fillRect(x+r*0.2,y-r*0.24,r*0.11,r*0.48);
   }else{
-    steamIcon(ctx,x,y,r*0.42,'rgba(255,255,255,0.95)',r*0.1);
+    steamIcon(ctx,x,y,r*0.40,'rgba(255,255,255,0.95)',r*0.1,n.flavor);
   }
   /* gloss */
   ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=1.6;
@@ -1601,11 +1632,12 @@ function drawGame(){
       /* name on top, one steam glyph per serving below — counts you can SEE */
       const n=order.counts[f];
       txt(FLAVORS[f].ko,cx+chipW/2,cy+chipH*0.29,chipH*0.32,active?'#1c150c':'#fff','center',F_SANS,'800');
-      const slot=Math.min(chipH*0.46,(chipW-chipH*0.6)/Math.max(1,n));
-      const gs=slot*0.4, ix=cx+chipW/2-slot*n/2;
+      const gn=f==='jjaguri'?n*2:n;
+      const slot=Math.min(chipH*0.46,(chipW-chipH*0.6)/Math.max(1,gn));
+      const gs=slot*0.4, ix=cx+chipW/2-slot*gn/2;
       const gc=active?FLAVORS[f].deep:(f==='jjapa'?'#c58c5a':FLAVORS[f].color);
-      for(let k=0;k<n;k++)
-        steamIcon(ctx,ix+slot*(k+0.5),cy+chipH*0.72,gs,gc,Math.max(1.4,gs*0.3),f==='jjaguri'?(k<Math.ceil(n/2)?'jjapa':'neogury'):f);
+      for(let k=0;k<gn;k++)
+        steamIcon(ctx,ix+slot*(k+0.5),cy+chipH*0.72,gs,gc,Math.max(1.4,gs*0.3),f==='jjaguri'?(k<n?'jjapa':'neogury'):f);
       ctx.globalAlpha=1;
     });
   }
@@ -1643,17 +1675,49 @@ function drawGame(){
   drawMascot(R.judgeX,R.railY-jr-SH*0.002,SH*0.066,fbg,G.combo>=8?'dance':'idle',G.time);
 
   /* ---- combo (hidden for a beat while the slurp vignette plays) ---- */
-  if(G.combo>=2 && !G.eat){
+  if(G.combo>=2 && !G.eat && !G.tut){
+    const c2=G.combo, tier=c2>=100?4:c2>=50?3:c2>=25?2:c2>=10?1:0;
     const pop=1+0.35*Math.max(0,1-(G.time-G.comboT)*4);
+    const col=tier===0?'#fff':tier===1?'#ffe95e':tier===2?'#ffb02e'
+             :`hsl(${(G.time*(tier===4?420:240))%360},100%,65%)`;   /* 50+ 무지개 */
     ctx.save(); ctx.translate(SW*0.5,R.comboY); ctx.scale(pop,pop);
-    txtO(`COMBO ×${G.combo}`,0,0,SW*0.07,G.fever?'#ffe95e':'#fff','rgba(20,10,0,0.8)',SW*0.015);
+    if(tier>=3) ctx.rotate(Math.sin(G.time*9)*0.03);
+    if(tier>=2){ ctx.shadowColor=tier>=3?col:'#ff9d1e'; ctx.shadowBlur=SW*(0.02+tier*0.008); }
+    txtO(`COMBO ×${c2}`,0,0,SW*(0.07+tier*0.007),col,'rgba(20,10,0,0.8)',SW*0.015);
     ctx.restore();
+    if(tier>=2){                                    /* 콤보 주위 별 오라 */
+      const nS=2+tier*2;
+      for(let i=0;i<nS;i++){
+        const a2=G.time*2.2+i*(6.283/nS);
+        ctx.save(); ctx.globalAlpha=0.4+0.4*Math.sin(G.time*7+i*2);
+        ctx.fillStyle=col;
+        starP(SW*0.5+Math.cos(a2)*SW*0.21,R.comboY+Math.sin(a2)*SW*0.045,SW*0.011+tier*1.5,G.time+i);
+        ctx.fill(); ctx.restore();
+      }
+    }
   }
   if(G.fever && !G.eat){
     const bl=0.72+0.28*Math.sin(G.time*10);
     ctx.globalAlpha=bl;
     if(G.time>=G.drop) txtO('🔥 FEVER ×2 🔥',SW*0.5,R.comboY+SW*0.082,SW*0.052,'#ffe95e','#a33000',SW*0.013);
     ctx.globalAlpha=1;
+  }
+
+  /* ---- 첫 판 튜토리얼: 연습 주문 가이드 ---- */
+  if(G.tut){
+    const tn=G.notes[G.noteIdx];
+    if(tn&&tn.order.no===1){
+      const msg=tn.type==='play'?'마지막은 오른쪽 ▶ PLAY 버튼!'
+               :`원판이 점선 원에 닿는 순간, ${FLAVORS[tn.flavor].ko} 버튼 탭!`;
+      ctx.save(); ctx.globalAlpha=0.8+0.2*Math.sin(G.time*5);
+      ctx.fillStyle='rgba(12,8,4,0.82)';
+      rr(ctx,SW*0.1,SH*0.325,SW*0.8,SH*0.062,SH*0.02); ctx.fill();
+      ctx.strokeStyle='#ffe95e'; ctx.lineWidth=1.5;
+      rr(ctx,SW*0.1+1,SH*0.325+1,SW*0.8-2,SH*0.062-2,SH*0.019); ctx.stroke();
+      txt('👆 '+msg,SW*0.5,SH*0.347,SH*0.019,'#ffe95e','center',F_SANS,'800');
+      txt('연습 주문 — 하트가 닳지 않아요!',SW*0.5,SH*0.372,SH*0.014,'rgba(255,255,255,0.65)');
+      ctx.restore();
+    }
   }
 
   /* ---- THE DROP overlay: beat-pulsing frame + title + ×3 badge ---- */
@@ -1745,8 +1809,9 @@ function drawGame(){
 
 /* the front of the line calls out their order */
 function orderSpeech(o){
-  const parts=(o.sections||[]).filter(s=>o.counts[s.key]>0).map(s=>`${FLAVORS[s.key].ko} ${o.counts[s.key]}`);
-  return (parts.length?parts.join(' · '):'라면 1')+'인분이요~!';
+  const parts=(o.sections||[]).filter(s=>o.counts[s.key]>0)
+    .map(s=>`${FLAVORS[s.key].ko} ${o.counts[s.key]}${s.key==='jjaguri'?'개':'인분'}`);
+  return (parts.length?parts.join(' · '):'라면 1인분')+' 주세요~!';
 }
 function drawToasts(){
   G.toasts.forEach((tst,i)=>{
