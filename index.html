@@ -221,7 +221,7 @@ const ART_FILES={
   p_bul1:'burr play.svg', p_bul2:'burr2 play.svg', p_bul3:'burr3 play.svg', p_bul4:'burr4 play.svg',
   p_jja1:'jjap play.svg', p_jja2:'jjap2 play.svg', p_jja3:'jjap3 play.svg', p_jja4:'jjap4 play.svg',
   p_neo1:'neo play.svg',  p_neo2:'shots!.svg',     p_neo3:'neo3 play.svg',  p_neo4:'neo4 play.svg',
-  t_slurp:'후루룹.svg', t_slurp2:'Slurp.svg', t_chop:'Chop!.svg',
+  t_slurp:'hururup.svg', t_slurp2:'Slurp.svg', t_chop:'Chop!.svg',
   t_sesh:'Timeforcokinsesh.svg',
   logo:'DJ_Ramyun_logo_800x800.png',
 };
@@ -578,7 +578,7 @@ function applyJudge(j,note){
       played=playBuf('guri'+serv,vol*0.95,1,{group:'play',cut:'fast',skipSilence:true})
            ||playBuf('jja'+serv,vol*0.9,1,{group:'play',cut:'fast',skipSilence:true});
     else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.9,1,{group:'play',skipSilence:true});
-    if(played) spawnFX({kind:'drop',flavor:note.flavor,serv,t0:G.time});   /* 타이포 = 사운드와 동시 (사운드 없으면 생략) */
+    if(played) spawnFX({kind:'drop',flavor:note.flavor,serv,t0:G.time+0.18});   /* 사운드가 뜨고 반박자 뒤 타이포 — 싱크 무드 */
     else dropFX(note.flavor,vol);
     G.flash=0.45; G.flashCol=hex2rgb(FLAVORS[note.flavor].color);
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
@@ -692,7 +692,7 @@ function spawnFX(o){
   if(G.fx.length<80) G.fx.push(o);
 }
 function updateFX(dt){
-  G.fx=G.fx.filter(f=>G.time-f.t0 < ((f.kind==='banner'||f.kind==='artslam')?1.4:0.8));
+  G.fx=G.fx.filter(f=>G.time-f.t0 < ((f.kind==='banner'||f.kind==='artslam')?1.4:f.kind==='drop'?1.15:0.8));
   G.toasts=G.toasts.filter(t=>G.time-t.t0<1.9);
   for(const c of G.confetti){ c.x+=c.vx*dt; c.y+=c.vy*dt; c.vy+=140*dt; c.rot+=c.vr*dt; }
   G.confetti=G.confetti.filter(c=>c.y<SH+30);
@@ -2018,6 +2018,7 @@ function drawGame(){
   /* ---- FX ---- */
   for(const f of G.fx){
     const t=G.time-f.t0;
+    if(t<0) continue;
     if(f.kind==='judge'){
       const cfg={perfect:['PERFECT!','#ffe95e',1.25],good:['GOOD','#9be564',1],bad:['BAD…','#bbb',0.8],miss:['MISS!!','#ff5040',1.3]}[f.j];
       const sc=cfg[2]*(1+0.4*Math.sin(Math.min(t*10,Math.PI)));
@@ -2048,8 +2049,8 @@ function drawGame(){
       txt(f.text,SW*0.5,SH*0.315,SH*0.0155,'#ffe95e','center',F_SANS,'900');
       ctx.restore();
     }else if(f.kind==='drop'){
-      const sc=1+0.5*Math.sin(Math.min(t*8,Math.PI));
-      ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
+      const sc=0.85+0.35*easeOut(t/0.3);            /* 천천히 차오르는 팝인 */
+      ctx.save(); ctx.globalAlpha=Math.min(1,t/0.12)*(1-easeIn((t-0.15)/1.0));
       ctx.translate(SW*0.5,SH*0.313); ctx.scale(sc,sc);
       const pk=f.flavor==='jjaguri'?null:'p_'+SFX_KEY[f.flavor]+(f.serv||1);
       const FB={ramyun:'DROP THE EGG!',buldak:'ON FIRE!!',jjapa:'IN THE SAUCE',
