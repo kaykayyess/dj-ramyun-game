@@ -48,10 +48,10 @@ const PADS = [
   {key:'jjapa',  label:'JJA'}, {key:'neogury',label:'NEO'}, {key:'play', label:'PLAY'}
 ];
 /* street-hip customer cast — rapper-inspired, BAPE-figure mood (닮았지만 다른) */
-const CUST_CAST = ['trav','carti','jay','ye','bey','phril','snoop','nicki','nigo','lisa','psy','em','billie'];
+const CUST_CAST = ['trav','carti','jay','ye','bey','phril','snoop','nicki','nigo','lisa','psy','em','billie','posty','tay'];
 const pickCust = ()=>CUST_CAST[irand(0,CUST_CAST.length-1)];
-const CUST_SKIN = {trav:'#8A5A3B',carti:'#6E4630',jay:'#7A4E33',ye:'#7E5236',bey:'#B07B4E',phril:'#8A5A3B',snoop:'#6E4630',nicki:'#9A6A44',nigo:'#F2C9A0',lisa:'#F5D3AE',psy:'#EDC49C',em:'#F2D5C0',billie:'#F0D8CC'};
-const CUST_QUOTE = {trav:"IT'S LIT!! 🔥🔥",carti:'슬랫! 이 맛 뭐야?!',jay:'클래식이네. 존중.',ye:'천재적인 맛이야.',bey:'완벽해~ Flawless!',phril:'맛이 노래하네 Happy~',snoop:'스무~스 하구먼 😎',nicki:'OMG 이 맛 실화?!',nigo:'이거… 명작이군.',lisa:'맛이 킬링파트야!!',psy:'옵빤 라면 스타일~!',em:'이 맛은 REAL이야.',billie:'헐… 미쳤다 이 맛.'};
+const CUST_SKIN = {trav:'#8A5A3B',carti:'#6E4630',jay:'#7A4E33',ye:'#7E5236',bey:'#B07B4E',phril:'#8A5A3B',snoop:'#6E4630',nicki:'#9A6A44',nigo:'#F2C9A0',lisa:'#F5D3AE',psy:'#EDC49C',em:'#F7E3D4',billie:'#F6E2DA',posty:'#F2D8C4',tay:'#F8E6D8'};
+const CUST_QUOTE = {trav:"IT'S LIT!! 🔥🔥",carti:'슬랫! 이 맛 뭐야?!',jay:'클래식이네. 존중.',ye:'천재적인 맛이야.',bey:'완벽해~ Flawless!',phril:'맛이 노래하네 Happy~',snoop:'스무~스 하구먼 😎',nicki:'OMG 이 맛 실화?!',nigo:'이거… 명작이군.',lisa:'맛이 킬링파트야!!',psy:'옵빤 라면 스타일~!',em:'이 맛은 REAL이야.',billie:'헐… 미쳤다 이 맛.',posty:'맛이 완전 락스타야 🤘',tay:'이 맛은… 러브스토리!'};
 const F_DISP   = 'Shrikhand,"Cooper Black","Arial Rounded MT Bold",serif';
 const F_ARCADE = '"Press Start 2P",ui-monospace,monospace';
 const F_SANS   = '-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif';
@@ -625,9 +625,25 @@ const CHIBI={
   nigo: {skin:0xF2C9A0, cloth:0x4E5B3A, hair:'flat',   hairC:0x14100C, chain:true, beard:'goatee'},
   lisa: {skin:0xF5D3AE, cloth:0xF2E14E, hair:'bangs',  hairC:0x241A12, hoops:true},
   psy:  {skin:0xEDC49C, cloth:0x22262E, hair:'buzz',   hairC:0x14100C, shades:'slim'},
-  em:   {skin:0xF2D5C0, cloth:0xEDEDED, hair:'buzz',   hairC:0xD8B24A, chain:true},
-  billie:{skin:0xF0D8CC,cloth:0x9CCB3B, hair:'shag',   hairC:0x1E5A48},
+  em:   {skin:0xF7E3D4, cloth:0xEDEDED, hair:'buzz',   hairC:0xD8B24A, chain:true},
+  billie:{skin:0xF6E2DA,cloth:0x9CCB3B, hair:'shag',   hairC:0x1E5A48},
+  posty:{skin:0xF2D8C4, cloth:0x777C82, hair:'shag',   hairC:0x6B4B32, beard:true, chain:true},
+  tay:  {skin:0xF8E6D8, cloth:0x7FB3E8, hair:'bangs',  hairC:0xE8C86A, hoops:true},
 };
+let PEND_MAT=null;
+function pendantFace(){
+  if(PEND_MAT) return PEND_MAT;
+  const tx=mkTex(128,128,(g)=>{
+    g.fillStyle='#E8A33D'; g.beginPath(); g.arc(64,64,62,0,7); g.fill();
+    g.fillStyle='#CE3A22'; g.beginPath(); g.arc(64,64,54,0,7); g.fill();
+    g.fillStyle='#FBF7EE'; g.beginPath(); g.arc(64,64,46,0,7); g.fill();
+    g.fillStyle='#CE3A22'; g.textAlign='center'; g.textBaseline='middle';
+    g.font='900 36px Arial'; g.fillText('DJ',64,47);
+    g.font='900 21px Arial'; g.fillText('Ramyun',64,79);
+  });
+  PEND_MAT=new THREE.MeshBasicMaterial({map:tx.t});
+  return PEND_MAT;
+}
 function mkChibi(type){
   const P=CHIBI[type]||CHIBI.jay;
   const g=new THREE.Group();
@@ -691,10 +707,25 @@ function mkChibi(type){
       b.scale.set(0.6,2.4,0.6); b.rotation.z=-s*0.15; }
   }
   /* ice & extras */
-  if(P.chain){
-    const ch=add(new THREE.Mesh(new THREE.TorusGeometry(0.15,0.02,8,20),GOLD),0,0.42,0.05);
-    ch.rotation.x=1.25;
-    add(new THREE.Mesh(new THREE.SphereGeometry(0.035,8,6),GOLD),0,0.33,0.17);
+  /* 커다란 DJ Ramyun 다이아 메달리온 — 단골이라면 다들 하나씩 */
+  {
+    const ch=add(new THREE.Mesh(new THREE.TorusGeometry(0.16,0.018,8,22),GOLD),0,0.42,0.06);
+    ch.rotation.x=1.22;
+    const med=new THREE.Group();
+    const disc=new THREE.Mesh(new THREE.CylinderGeometry(0.115,0.115,0.028,22),GOLD);
+    disc.rotation.x=Math.PI/2; med.add(disc);
+    const face=new THREE.Mesh(new THREE.CircleGeometry(0.098,22),pendantFace());
+    face.position.z=0.016; med.add(face);
+    const DIA=new THREE.MeshStandardMaterial({color:0xffffff,metalness:0.9,roughness:0.08,emissive:0x99AACC,emissiveIntensity:0.3});
+    for(let i=0;i<8;i++){ const a=i/8*Math.PI*2;
+      const d=new THREE.Mesh(new THREE.OctahedronGeometry(0.021),DIA);
+      d.position.set(Math.cos(a)*0.115,Math.sin(a)*0.115,0.012); d.rotation.z=a; med.add(d); }
+    med.position.set(0,0.285,0.19); med.rotation.x=-0.2;
+    g.add(med);
+  }
+  if(P.chain){                                     /* OG들은 얇은 세컨드 체인 레이어 */
+    const ch2=add(new THREE.Mesh(new THREE.TorusGeometry(0.125,0.011,6,18),GOLD),0,0.45,0.05);
+    ch2.rotation.x=1.3;
   }
   if(P.hoops) for(const s of[-1,1])
     add(new THREE.Mesh(new THREE.TorusGeometry(0.05,0.012,6,14),GOLD),s*0.29,0.63,0.03);
@@ -1104,7 +1135,7 @@ function update3D(dt){
         if(!seen.has(o.no)){ seen.add(o.no); want.push(o.customer); }
       }
       const extra=Math.min(3,Math.max(0,((G.orderCount-2)/3)|0));
-      const EX=['jay','lisa','em','bey','nigo','phril'];
+      const EX=['jay','tay','em','lisa','posty','bey','nigo','phril'];
       for(let k=0;k<extra;k++) want.push(EX[(k*2+1)%EX.length]);
     }
     T3.qSlots.forEach((sl,i)=>{
@@ -1273,8 +1304,8 @@ function drawCust(x,y,r,type,t,mood='idle'){
   ctx.strokeStyle=dark; ctx.lineWidth=lw;
 
   /* ---- behind the face: long hair / braids ---- */
-  if(type==='bey'||type==='nicki'||type==='lisa'){
-    ctx.fillStyle=type==='bey'?'#D9A44A':type==='lisa'?'#241A12':'#F06CA8';
+  if(type==='bey'||type==='nicki'||type==='lisa'||type==='tay'){
+    ctx.fillStyle=type==='bey'?'#D9A44A':type==='lisa'?'#241A12':type==='tay'?'#E8C86A':'#F06CA8';
     ctx.beginPath(); ctx.ellipse(0,-r*0.2,r*1.16,r*1.02,0,0,7); ctx.fill(); ctx.stroke();
     for(const s of[-1,1]){ ctx.beginPath(); ctx.ellipse(s*r*0.82,r*0.5,r*0.32,r*0.72,s*0.12,0,7); ctx.fill(); ctx.stroke(); }
   }
@@ -1295,7 +1326,7 @@ function drawCust(x,y,r,type,t,mood='idle'){
   /* ---- hair & hats over the face ---- */
   if(type==='trav'){ ctx.fillStyle='#1B1410';      /* braid crown */
     ctx.beginPath(); ctx.arc(0,-r*0.4,r*0.82,Math.PI*1.02,Math.PI*1.98); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-  if(type==='carti'||type==='billie'){ ctx.fillStyle=type==='billie'?'#1E5A48':'#121212';   /* shag + spiky edges */
+  if(type==='carti'||type==='billie'||type==='posty'){ ctx.fillStyle=type==='billie'?'#1E5A48':type==='posty'?'#6B4B32':'#121212';   /* shag + spiky edges */
     ctx.beginPath(); ctx.arc(0,-r*0.38,r*0.84,Math.PI*1.0,Math.PI*2.0); ctx.closePath(); ctx.fill(); ctx.stroke();
     for(let i=-2;i<=2;i++){ ctx.beginPath();
       ctx.moveTo(i*r*0.3-r*0.1,-r*0.42); ctx.lineTo(i*r*0.3,-r*0.12); ctx.lineTo(i*r*0.3+r*0.1,-r*0.42);
@@ -1310,7 +1341,7 @@ function drawCust(x,y,r,type,t,mood='idle'){
     ctx.beginPath(); ctx.arc(0,-r*0.42,r*0.78,Math.PI*0.96,Math.PI*2.04); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   if(type==='nicki'){ ctx.fillStyle='#F06CA8';
     ctx.beginPath(); ctx.arc(0,-r*0.42,r*0.78,Math.PI*0.96,Math.PI*2.04); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-  if(type==='lisa'){ ctx.fillStyle='#241A12';       /* full bangs */
+  if(type==='lisa'||type==='tay'){ ctx.fillStyle=type==='tay'?'#E8C86A':'#241A12';   /* full bangs */
     ctx.beginPath(); ctx.arc(0,-r*0.36,r*0.82,Math.PI*0.92,Math.PI*2.08); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   if(type==='phril'){                              /* big ranger hat */
     ctx.fillStyle='#6E4C2E';
@@ -1369,16 +1400,16 @@ function drawCust(x,y,r,type,t,mood='idle'){
   }else if(mood==='idle'){ ctx.beginPath(); ctx.moveTo(-r*0.13,my); ctx.lineTo(r*0.13,my-r*0.03); ctx.stroke(); }
 
   /* ---- ice: chain + hoops ---- */
-  if(type==='trav'||type==='carti'||type==='jay'||type==='ye'||type==='em'||type==='nigo'){
+  if(type==='trav'||type==='carti'||type==='jay'||type==='ye'||type==='em'||type==='nigo'||type==='posty'){
     ctx.strokeStyle='#F2C14E'; ctx.lineWidth=lw*1.15;
     ctx.beginPath(); ctx.arc(0,r*0.5,r*0.66,Math.PI*0.18,Math.PI*0.82); ctx.stroke();
     ctx.fillStyle='#F2C14E'; ctx.beginPath(); ctx.arc(0,r*1.18,r*0.1,0,7); ctx.fill();
     ctx.strokeStyle=dark; ctx.lineWidth=lw;
   }
-  if(type==='bey'||type==='nicki'||type==='lisa'){ ctx.strokeStyle='#F2C14E'; ctx.lineWidth=lw*1.1;
+  if(type==='bey'||type==='nicki'||type==='lisa'||type==='tay'){ ctx.strokeStyle='#F2C14E'; ctx.lineWidth=lw*1.1;
     for(const s of[-1,1]){ ctx.beginPath(); ctx.arc(s*r*0.92,r*0.38,r*0.13,0,7); ctx.stroke(); }
     ctx.strokeStyle=dark; ctx.lineWidth=lw; }
-  if(type==='jay'){ ctx.strokeStyle='#171310'; ctx.lineWidth=lw*2.1;   /* beard line */
+  if(type==='jay'||type==='posty'){ ctx.strokeStyle=type==='posty'?'#5A3E28':'#171310'; ctx.lineWidth=lw*2.1;   /* beard line */
     ctx.beginPath(); ctx.arc(0,r*0.06,r*0.8,Math.PI*0.22,Math.PI*0.78); ctx.stroke();
     ctx.strokeStyle=dark; ctx.lineWidth=lw; }
   if(type==='nigo'){ ctx.fillStyle='#171310';       /* goatee */
