@@ -474,10 +474,15 @@ function orderParams(no){
   const mkey=A.bgmKey||(A.mbuf&&(A.mbuf.beat1?'beat1':A.mbuf.beat2?'beat2':''))||'';
   const bpm = mkey ? A.MUSIC_BPM[mkey] : Math.min(86+(no-1)*1.8, 160);
   const r=Math.random();
-  const secN = no<=14?1 : no<=20?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
-  const mx = no<=8?2 : no<=14?3 : 4;
-  const tap = no<20?1 : 0.5;                       /* 더블타임도 정확히 반박자 그리드 */
-  return {bpm, secN, mn:1, mx, tap};
+  const secN = no<=16?1 : no<=22?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
+  /* 인분 성장 곡선: 1인분만 → 2인분 → 3인분 → 4인분 */
+  let mn=1,mx=1;
+  if(no>=5){ mx=2; }
+  if(no>=9){ mn=2; mx=3; }
+  if(no>=13){ mn=2; mx=4; }
+  /* 콤보가 쌓이면 몰아친다 — 미스로 콤보가 깨지면 다시 숨 돌릴 틈 */
+  const tap = (G.combo>=25||no>=24) ? 0.5 : 1;
+  return {bpm, secN, mn, mx, tap};
 }
 function pushOrder(){
   const no=++G.orderCount;
@@ -487,11 +492,11 @@ function pushOrder(){
   /* a real order: usually one item, sometimes two, more when the shop gets slammed */
   let pool=[...SEQ];
   const secs=[];
-  if(no>=3 && Math.random()<0.38){ secs.push('jjaguri'); pool=pool.filter(f=>f!=='jjapa'&&f!=='neogury'); }
+  if(no>=12 && Math.random()<0.35){ secs.push('jjaguri'); pool=pool.filter(f=>f!=='jjapa'&&f!=='neogury'); }  /* 짜파구리는 4인분 경험 후 해금 */
   while(secs.length<p.secN && pool.length) secs.push(pool.splice(irand(0,pool.length-1),1)[0]);
   if(!secs.length) secs.push('ramyun');
   G.diff=Math.min(1,(no-1)/26);                    /* 난이도 지표 (판정창·점수 배율) */
-  const gap = Math.max(2, Math.round(4.4 - no*0.13));  /* 정수 박자 → 그리드 유지 */
+  const gap = Math.max(2, Math.round(4.4 - no*0.09 - G.combo/16));  /* 콤보 높을수록 텀이 짧아진다 */
   let t=G.cursorT;
   if(A.bgmAnchor&&A.bgmBpm){                       /* 음악 박자선에 스냅 */
     const bl=60/A.bgmBpm;
@@ -520,7 +525,7 @@ function startGame(){
   G.score=0; G.lives=3; G.combo=0; G.maxCombo=0; G.bowls=0; G.orderCount=0; G.perfectOrders=0;
   G.notes=[]; G.noteIdx=0; G.bpm=96; G.fever=false; G.dying=0; G.newBest=false;
   G.fx.length=0; G.toasts.length=0; G.confetti.length=0; G.curOrderNo=0; G.curSection=''; G.eat=null; G.drop=0; G.dropT0=0;
-  G.tut=!localStorage.getItem('djr_tut');         /* 첫 판이면 1번 주문 = 연습 모드 */
+  G.tut=!localStorage.getItem('djr_tut2');         /* 첫 판이면 1번 주문 = 연습 모드 */
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
   G.pStreak=0;
@@ -612,7 +617,7 @@ function domOf(order){
 function finishOrder(order){
   const ratio=order.hit/order.total;
   if(T3.ok) T3.serveClear();   // the pot is emptied — bowl handed to the customer
-  if(G.tut&&order.no===1){ G.tut=false; localStorage.setItem('djr_tut','1');
+  if(G.tut&&order.no===1){ G.tut=false; localStorage.setItem('djr_tut2','1');
     spawnFX({kind:'banner',text:'✨ 연습 끝 — 진짜 영업 시작!!',t0:G.time}); }
   if(order.miss===0){
     const b=Math.round(1000*diffMult())*(G.fever?2:1);
@@ -2288,6 +2293,8 @@ function drawEat(){
   ctx.restore();
 }
 function drawPads(R){
+  const tn=G.tut&&G.state==='game'?G.notes[G.noteIdx]:null;
+  const tut_tgt=tn&&tn.order.no===1?(tn.type==='play'?'play':tn.flavor):null;
   const gap=SW*0.016;
   const cell=(SW-gap*6)/5;                     // 라면 패드도 플레이버튼과 같은 크기
   const playD=Math.min(cell,R.padH*0.95);
@@ -2331,6 +2338,11 @@ function drawPads(R){
         rr(ctx,x-(1-pr)*9,fy-(1-pr)*9,w+(1-pr)*18,h+(1-pr)*18,rad*1.2); ctx.stroke();
         ctx.globalAlpha=1;
       }
+      if(p.key===tut_tgt){                        /* 튜토리얼: 이 버튼이야! */
+        ctx.strokeStyle='#ffe95e'; ctx.shadowColor='#ffe95e'; ctx.shadowBlur=16;
+        ctx.lineWidth=4+Math.sin(G.time*8)*2;
+        rr(ctx,x-6,fy-6,w+12,h+12,rad*1.25); ctx.stroke(); ctx.shadowBlur=0;
+      }
       ctx.restore();
       G.padRects.push({x:x+SX,y:R.padY-12,w,h:R.padH+24,key:p.key});
       x+=w+gap;
@@ -2344,6 +2356,11 @@ function drawPads(R){
       ctx.beginPath(); ctx.ellipse(cx+2,cy+6,rad,rad*0.96,0,0,7); ctx.fill();
       ctx.fillStyle='#2b2b30';                    // 실제 제품 버튼처럼 짙은 그레이 베젤
       ctx.beginPath(); ctx.arc(cx,cy,rad,0,7); ctx.fill();
+      if(tut_tgt==='play'){                       /* 튜토리얼: 마지막은 PLAY! */
+        ctx.strokeStyle='#ffe95e'; ctx.shadowColor='#ffe95e'; ctx.shadowBlur=16;
+        ctx.lineWidth=4+Math.sin(G.time*8)*2;
+        ctx.beginPath(); ctx.arc(cx,cy,rad+7,0,7); ctx.stroke(); ctx.shadowBlur=0;
+      }
       /* 실제 제품처럼 버튼 가장자리를 감싸는 화이트 LED 링 — 누르면 점등 */
       ctx.shadowColor='#fff'; ctx.shadowBlur=8+34*pr;
       ctx.strokeStyle=`rgba(255,255,255,${0.3+0.7*pr})`;
