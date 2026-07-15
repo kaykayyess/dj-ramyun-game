@@ -1981,8 +1981,8 @@ function drawGame(){
   if(G.tut){
     const tn=G.notes[G.noteIdx];
     if(tn&&tn.order.no===1){
-      const msg=tn.type==='play'?'마지막은 오른쪽 ▶ PLAY 버튼!'
-               :`원판이 점선 원에 닿는 순간, ${FLAVORS[tn.flavor].ko} 버튼 탭!`;
+      const msg=tn.type==='play'?'마지막은 오른쪽 아래 ▶ PLAY 버튼!'
+               :`위 원판이 점선 원에 닿는 순간 → 아래 ${FLAVORS[tn.flavor].ko} 버튼 탭!`;
       ctx.save(); ctx.globalAlpha=0.8+0.2*Math.sin(G.time*5);
       ctx.fillStyle='rgba(12,8,4,0.82)';
       rr(ctx,SW*0.1,SH*0.325,SW*0.8,SH*0.062,SH*0.02); ctx.fill();
@@ -2080,6 +2080,37 @@ function drawGame(){
 
   /* ---- pads ---- */
   drawPads(R);
+
+  /* ---- 튜토리얼: 눌러야 할 버튼을 손가락으로 콕 집어준다 ---- */
+  if(G.tut){
+    const tn2=G.notes[G.noteIdx];
+    if(tn2&&tn2.order.no===1){
+      const key2=tn2.type==='play'?'play':tn2.flavor;
+      const pr2=G.padRects.find(q=>q.key===key2);
+      if(pr2){
+        const px=pr2.x-SX+pr2.w/2, py=pr2.y;
+        const eta=tn2.time-pnow();
+        const near=eta<0.4&&eta>-0.2;                 /* 원판이 거의 다 왔다! */
+        ctx.save();
+        ctx.setLineDash([SW*0.014,SW*0.012]);
+        ctx.strokeStyle=near?'#ffe95e':'rgba(255,233,94,0.45)';
+        ctx.lineWidth=near?4:2.5;
+        ctx.beginPath();
+        ctx.moveTo(R.judgeX,R.railY+SH*0.035);
+        ctx.bezierCurveTo(R.judgeX,SH*0.56, px,SH*0.6, px,py-SH*0.05);
+        ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle=near?'#ffe95e':'rgba(255,233,94,0.55)';
+        ctx.beginPath();
+        ctx.moveTo(px-SW*0.017,py-SH*0.052); ctx.lineTo(px+SW*0.017,py-SH*0.052); ctx.lineTo(px,py-SH*0.022);
+        ctx.closePath(); ctx.fill();
+        const hop2=near?Math.abs(Math.sin(G.time*14))*SH*0.014:Math.abs(Math.sin(G.time*4.5))*SH*0.022;
+        ctx.font=`${SW*0.09}px ${F_SANS}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('👇',px,py-SH*0.09-hop2);
+        if(near) txtO('지금 탭!!',px,py-SH*0.15,SW*0.042,'#ffe95e','#7a2800',SW*0.01);
+        ctx.restore();
+      }
+    }
+  }
 
   /* damage vignette */
   if(G.dmg>0){
