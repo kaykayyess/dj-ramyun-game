@@ -216,6 +216,7 @@ const ART_FILES={
   t_illegal:'That’sillegal.svg', t_crazy:'Youcrazy.svg', t_hits:'Youcookinhits!.svg',
   t_ddrip:'Doubledrip.svg', t_triple:'Tripletailsbaby!.svg', t_dfire:'Double fire!.svg',
   t_sesh:'Timeforcokinsesh.svg',
+  logo:'DJ_Ramyun_logo_800x800.png',
 };
 const ART={};
 for(const k in ART_FILES){
@@ -1012,6 +1013,14 @@ function init3D(){
     const lbl=mkTex(1024,640,drawLbl);
     if(document.fonts&&document.fonts.ready)   /* redraw once the Shrikhand webfont is in */
       document.fonts.ready.then(()=>{ drawLbl(lbl.c.getContext('2d')); lbl.t.needsUpdate=true; });
+    { /* 공식 로고 PNG가 로드되면 냄비 스티커를 진짜 로고로 교체 */
+      const lg=new Image();
+      lg.onload=()=>{ const g=lbl.c.getContext('2d'); g.clearRect(0,0,1024,640);
+        const sc=Math.min(1024/lg.width,640/lg.height)*1.32;
+        g.drawImage(lg,(1024-lg.width*sc)/2,(640-lg.height*sc)/2,lg.width*sc,lg.height*sc);
+        lbl.t.needsUpdate=true; };
+      lg.src='art/'+encodeURIComponent('DJ_Ramyun_logo_800x800.png');
+    }
     const lblM=new THREE.Mesh(new THREE.PlaneGeometry(0.56,0.35),
       new THREE.MeshBasicMaterial({map:lbl.t,transparent:true}));
     /* tilt to match the pot's tapered wall so the top of the logo isn't swallowed by it */
@@ -2252,7 +2261,7 @@ function drawAttract(){
   if(blink){ ctx.textAlign='right'; ctx.fillText('INSERT COIN',SW*0.96,SH*0.04); }
 
   const bob=Math.abs(Math.sin(G.time*2.4))*SH*0.012;
-  drawLogoBadge(ctx,SW/2,SH*0.185-bob,SW*0.82);
+  if(!drawArt('logo',SW/2,SH*0.185-bob,SW*0.92)) drawLogoBadge(ctx,SW/2,SH*0.185-bob,SW*0.82);
   for(let i=0;i<5;i++){
     const sp=(G.time*0.7+i*0.618)%1;
     const sx=SW*(0.12+((i*0.19+0.05)%0.8)),sy=SH*(0.06+((i*0.13)%0.19));
