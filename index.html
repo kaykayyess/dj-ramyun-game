@@ -2239,10 +2239,11 @@ function drawEat(){
   drawMiniBowl(bx,by,bw,G.eat.flavor,G.time,-0.12+Math.sin(t*6)*0.03);
 
   const sp=G.eat.spice||0, srv=G.eat.serv||1;
-  const mukbang=!sp&&srv>=3;                          /* 먹방러 모드 */
-  const full=!sp&&srv>=4;                             /* 배 터지기 직전 */
+  const eff=G.eat.flavor==='jjaguri'?srv*2:srv;       /* 짜파구리 1개=2봉지 */
+  const mukbang=!sp&&eff>=3;                          /* 먹방러 모드 */
+  const full=!sp&&eff>=4;                             /* 배 터지기 직전 (4인분 or 짜파구리 2개) */
   const jit=sp>=2?Math.sin(G.time*34)*R*0.045:0;      /* 불닭 2개부터 덜덜 */
-  const R2=full&&happy?R*1.16:mukbang?R*1.06:R;      /* 많이 먹으면 얼굴도 빵빵 */
+  const R2=full&&happy?R*1.26*(1+Math.sin(G.time*7)*0.02):mukbang?R*1.08:R;   /* 만복이면 빵빵+출렁 */
   drawCust(fx+jit,fy,R2,G.eat.customer,G.time,happy?(G.eat.perfect?'happy':'yum'):'slurp');
   /* ---- 불닭 매움 리액션: 인분수 = 고통 레벨 ㅋㅋ ---- */
   if(sp>0){
@@ -2294,7 +2295,29 @@ function drawEat(){
       ctx.font=`${SW*0.06}px ${F_SANS}`; ctx.textAlign='center';
       ctx.fillText('🚒',fx-R*1.3+Math.sin(G.time*6)*R*0.15,fy-R*1.1);
       ctx.fillText('🧯',fx+R*1.4,fy+R*0.4+Math.sin(G.time*7)*R*0.1);
-      G.shake=Math.max(G.shake,2.2);
+      /* 사망 확정: 머리 위 천사 링 */
+      ctx.save(); ctx.shadowColor='#FFE066'; ctx.shadowBlur=16;
+      ctx.strokeStyle='#F5D34E'; ctx.lineWidth=R*0.075;
+      ctx.beginPath();
+      ctx.ellipse(fx+jit,fy-R*1.42+Math.sin(G.time*3)*R*0.06,R*0.44,R*0.14,0,0,7);
+      ctx.stroke(); ctx.restore();
+      /* X자 눈 — 완전히 갔다 */
+      ctx.strokeStyle='#2A1B0C'; ctx.lineWidth=R*0.075; ctx.lineCap='round';
+      for(const sg of[-1,1]){ const ex2=fx+jit+sg*R*0.38, ey2=fy-R*0.08;
+        ctx.beginPath();
+        ctx.moveTo(ex2-R*0.13,ey2-R*0.13); ctx.lineTo(ex2+R*0.13,ey2+R*0.13);
+        ctx.moveTo(ex2+R*0.13,ey2-R*0.13); ctx.lineTo(ex2-R*0.13,ey2+R*0.13);
+        ctx.stroke(); }
+      /* 유령 한 마리 더 (양쪽으로 승천) */
+      { const gp2=(G.time*0.45+0.5)%1;
+        ctx.save(); ctx.globalAlpha=0.5*(1-gp2);
+        const gx2=fx-R*1.0-Math.sin(G.time*3.5)*R*0.1, gy2=fy-R*0.4-gp2*R*1.5;
+        ctx.fillStyle='#fff';
+        ctx.beginPath(); ctx.arc(gx2,gy2,R*0.13,Math.PI,0);
+        ctx.lineTo(gx2+R*0.13,gy2+R*0.18);
+        ctx.quadraticCurveTo(gx2,gy2+R*0.12,gx2-R*0.13,gy2+R*0.18);
+        ctx.closePath(); ctx.fill(); ctx.restore(); }
+      G.shake=Math.max(G.shake,2.6);
     }
   }
   /* ---- 먹방러 모드 (3인분+): 볼 빵빵 + LIVE 방송 ㅋㅋ ---- */
@@ -2317,7 +2340,15 @@ function drawEat(){
     ctx.font=`${SW*0.05}px ${F_SANS}`; ctx.textAlign='center';
     ctx.fillText('꺼어어억~~',fx+R*0.3,fy-R*1.5-bp*R*0.9);
     ctx.restore();
-    comicText('완식!!',fx-R*1.2,fy-R*1.1,SW*0.05,'#F5E056');
+    if(!G.eat._boom){ G.eat._boom=1;                 /* 완식 축포 — 한 번만 빵! */
+      for(let i=0;i<22;i++) G.confetti.push({x:fx+rand(-R,R),y:fy+rand(-R,R*0.5),vx:rand(-140,140),vy:rand(-220,-60),rot:rand(0,6.3),vr:rand(-6,6),c:['#F2C14E','#ffe95e','#fff'][i%3],s:rand(4,9)});
+      G.shake=Math.max(G.shake,6);
+    }
+    ctx.save(); ctx.translate(fx-R*1.25,fy-R*1.15); ctx.rotate(-0.12+Math.sin(ht*6)*0.04);
+    comicText('완식!!',0,0,SW*0.062,'#F5E056');
+    ctx.restore();
+    ctx.fillStyle='#F2B21C';
+    for(const sg of[-1,1]){ starP(fx-R*1.25+sg*R*0.85,fy-R*1.35,R*0.14,ht*3); ctx.fill(); }
     ctx.fillStyle='rgba(140,208,236,0.85)';
     ctx.beginPath(); ctx.ellipse(fx+R*0.5,fy-R*0.55,R*0.06,R*0.1,0.3,0,7); ctx.fill();
     G.shake=Math.max(G.shake,0.8);
@@ -2379,7 +2410,7 @@ function drawEat(){
     /* ---- quick reaction pop, then out of the way ---- */
     const pop=easeOut(ht/0.16);
     ctx.save(); ctx.translate(SW*0.71,cy-SH*0.15); ctx.scale(pop,pop); ctx.rotate(Math.sin(ht*5)*0.04);
-    const spq=sp>=4?'일일구!!! 소방차 불러!!! 🚒':sp>=3?'저세상이 보인다... 👼':sp>=2?'매워서 죽을 것 같아!!! 🥵':sp>=1?'혀가 얼얼얼—!! 🔥':full?'배 터진다아아... 꺼억 🤰':mukbang?'쩝쩝박사 인정?? 🎥':null;
+    const spq=sp>=4?'사망... 천국에서 만나요 👼':sp>=3?'저세상이 보인다... 👼':sp>=2?'매워서 죽을 것 같아!!! 🥵':sp>=1?'혀가 얼얼얼—!! 🔥':full?'배 터진다아아... 꺼억 🤰':mukbang?'쩝쩝박사 인정?? 🎥':null;
     txtO(spq||CUST_QUOTE[G.eat.customer]||'후루룩~ 최고!',0,0,SW*0.037,'#fff','rgba(20,10,0,0.85)',SW*0.008);
     ctx.restore();
     if(G.eat.perfect){
