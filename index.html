@@ -1757,6 +1757,36 @@ function steamIcon(c,x,y,s,color,lw,flavor){
   }
   c.restore();
 }
+/* HUD 라이프 전용: 유리알처럼 반질한 입체 하트 */
+function heart3d(x,y,s,alive,ph=0){
+  ctx.save();
+  const pu=alive?1+0.05*Math.sin(G.time*4.6+ph):1;      /* 두근두근 */
+  ctx.translate(x,y); ctx.scale(pu,pu);
+  const P=()=>{ ctx.beginPath();
+    ctx.moveTo(0,s*0.4);
+    ctx.bezierCurveTo(-s*0.64,-s*0.02,-s*0.46,-s*0.62,0,-s*0.26);
+    ctx.bezierCurveTo(s*0.46,-s*0.62,s*0.64,-s*0.02,0,s*0.4);
+    ctx.closePath(); };
+  if(alive){
+    ctx.shadowColor='rgba(255,46,80,0.85)'; ctx.shadowBlur=s*0.55;
+    const g=ctx.createRadialGradient(-s*0.2,-s*0.28,s*0.06,-s*0.05,-s*0.02,s*0.85);
+    g.addColorStop(0,'#ff8ba0'); g.addColorStop(0.42,'#ff2e4d'); g.addColorStop(0.8,'#c40f2e'); g.addColorStop(1,'#8f0a22');
+    ctx.fillStyle=g; P(); ctx.fill();
+    ctx.shadowBlur=0;
+    const g2=ctx.createLinearGradient(0,-s*0.1,0,s*0.42);   /* 아래쪽 깊이 음영 */
+    g2.addColorStop(0,'rgba(0,0,0,0)'); g2.addColorStop(1,'rgba(90,0,14,0.45)');
+    ctx.fillStyle=g2; P(); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.85)';                 /* 유리 하이라이트 */
+    ctx.beginPath(); ctx.ellipse(-s*0.22,-s*0.3,s*0.14,s*0.085,-0.5,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.beginPath(); ctx.arc(s*0.16,-s*0.34,s*0.045,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(255,170,185,0.5)'; ctx.lineWidth=s*0.05; P(); ctx.stroke();
+  }else{
+    ctx.fillStyle='rgba(255,255,255,0.08)'; P(); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=s*0.05; P(); ctx.stroke();
+  }
+  ctx.restore();
+}
 function heart(x,y,s,fill,glow){
   ctx.save();
   if(glow){ ctx.shadowColor=fill; ctx.shadowBlur=s*0.6; }
@@ -2057,9 +2087,9 @@ function drawBG(){
   bgX.save(); bgX.translate(SX,0);
   /* 블랙 스튜디오 — 제품 화보처럼 옐로우가 대비되는 배경 */
   bgX.fillStyle='#060504'; bgX.fillRect(0,0,SW,SH);
-  /* 잘할수록 우주가 서서히 열린다 (주문 진행 + 콤보 35+ 게이트) */
-  const spTgt=Math.min(1,clamp((G.curOrderNo-10)/20,0,0.8)+(G.combo>=35?0.25:0));
-  G.space=(G.space||0)+(spTgt-(G.space||0))*0.004;
+  /* 우주는 아주 천천히 — 밀키웨이는 진짜 초고수의 특권 (주문 18+부터 미세하게, 콤보 50+ 게이트) */
+  const spTgt=Math.min(1,clamp((G.curOrderNo-18)/30,0,0.55)+(G.combo>=50?0.5:G.combo>=35?0.15:0));
+  G.space=(G.space||0)+(spTgt-(G.space||0))*0.0015;
   if(G.space>0.03) drawSpace(G.space);
   /* 기계를 비추는 웜 스포트라이트 (flavor 틴트) */
   const g=bgX.createRadialGradient(SW*0.5,SH*0.52,SH*0.04,SW*0.5,SH*0.56,SH*0.62);
@@ -2199,7 +2229,7 @@ function drawGame(){
   ctx.textAlign='center'; ctx.fillText('ORDER',SW*0.57,R.hudY-SH*0.017);
   ledTxt(G.tut?'#--':'#'+String(G.curOrderNo).padStart(2,'0'),SW*0.57,R.hudY+SH*0.015,SW*0.042,'center');   /* 연습 중엔 #-- */
   for(let i=0;i<3;i++)
-    heart(SW*0.93-i*SW*0.078,R.hudY,SW*0.062,i<G.lives?'#ff2e3f':'rgba(255,255,255,0.13)',i<G.lives);
+    heart3d(SW*0.93-i*SW*0.078,R.hudY,SW*0.062,i<G.lives,i*0.9);
 
   /* ---- section label (right of the mascot lane) ---- */
   comicText(FL.label,SW*0.63,R.labelY+SH*0.012,SW*0.088,FL.color==='#8a5432'?'#c58c5a':FL.color);
