@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DJ Ramyun — 사운드·타이포 대조 검사</title>
+<style>
+body{background:#0b0906;color:#fff;font-family:-apple-system,"Apple SD Gothic Neo",sans-serif;margin:0;padding:16px}
+h1{font-size:18px;color:#F5B31B} p{color:#bbb;font-size:13px;line-height:1.5}
+.row{display:flex;align-items:center;gap:14px;background:#17120b;border:1px solid #33240f;border-radius:12px;padding:10px 14px;margin:8px 0}
+.row.playing{border-color:#F5B31B;background:#241a0c}
+button{background:#F5B31B;border:0;border-radius:24px;width:48px;height:48px;font-size:18px;cursor:pointer;flex:none}
+.svgbox{width:130px;height:74px;flex:none;display:flex;align-items:center;justify-content:center;background:#000;border-radius:8px}
+.svgbox img{max-width:100%;max-height:100%}
+.names{font-size:11px;color:#8a7a5a;line-height:1.6;word-break:break-all}
+.names b{color:#ffe95e;font-size:13px}
+.bad{margin-left:auto;flex:none}
+.bad input{transform:scale(1.5)}
+#report{position:fixed;bottom:0;left:0;right:0;background:#2a1005;padding:12px 16px;font-size:14px;color:#ffb3a0;border-top:2px solid #e0301e}
+</style>
+</head>
+<body>
+<h1>🎧 플레이 사운드 ↔ 타이포 대조 검사</h1>
+<p>각 줄의 ▶ 를 누르면 <b>그 파일명의 사운드</b>가 재생되고 옆에 <b>같은 이름의 타이포</b>가 보입니다.<br>
+들리는 소리와 타이포가 <b>안 맞는 줄</b>의 오른쪽 체크박스를 켜주세요. 아래에 어긋난 파일명이 정리됩니다.<br>
+(코드 매핑은 파일명 기준으로 전부 일치 확인 완료 — 여기서 어긋나면 <b>그 파일의 내용물</b>이 이름과 다른 것)</p>
+<div id="list"></div>
+<div id="report" style="display:none"></div>
+<script>
+const PAIRS=[
+ ['RAM 1인분','sfx/RAM Play.wav','art/RAM Play.svg'],
+ ['RAM 2인분','sfx/RAM2 Play.wav','art/RAM2 Play.svg'],
+ ['RAM 3인분','sfx/Ram3 Play.wav','art/RAM3 Play.svg'],
+ ['RAM 4인분','sfx/RAM4 Play.wav','art/RAM4 Play.svg'],
+ ['BURR 1인분','sfx/BURR Play.wav','art/BURR Play.svg'],
+ ['BURR 2인분','sfx/BURR2 Play.wav','art/BURR2 Play.svg'],
+ ['BURR 3인분','sfx/BURR3 Play.wav','art/BURR3 Play.svg'],
+ ['BURR 4인분','sfx/BURR4 Play.wav','art/BURR4 play.svg'],
+ ['JJAP 1인분','sfx/JJAP Play.wav','art/JJAP Play.svg'],
+ ['JJAP 2인분','sfx/JJAP2 Play.wav','art/JJAP2 Play.svg'],
+ ['JJAP 3인분','sfx/JJAP3 Play.wav','art/JJAP3 Play.svg'],
+ ['JJAP 4인분','sfx/JJAP4 Play.wav','art/JJAP4 Play.svg'],
+ ['NEO 1인분','sfx/NEO Play.wav','art/NEO Play.svg'],
+ ['NEO 2인분','sfx/NEO2 Play.wav','art/NEO2 Play.svg'],
+ ['NEO 3인분','sfx/NEO3 Play.wav','art/NEO3 Play.svg'],
+ ['NEO 4인분','sfx/NEO4 Play.wav','art/NEO4 Play.svg'],
+ ['짜파구리 1개','sfx/jjapagury play.mp3','(타이포 없음 — IN THE MIX!)'],
+ ['짜파구리 2개','sfx/jjapagury2 play.mp3','(타이포 없음 — DOUBLE MIX!!)'],
+];
+const list=document.getElementById('list'), rep=document.getElementById('report');
+let cur=null;
+PAIRS.forEach(([label,snd,art],i)=>{
+  const row=document.createElement('div'); row.className='row';
+  const hasArt=art.startsWith('art/');
+  row.innerHTML=`<button>▶</button>
+    <div class="svgbox">${hasArt?`<img src="${encodeURI(art)}">`:'<span style="color:#666;font-size:11px">'+art+'</span>'}</div>
+    <div class="names"><b>${label}</b><br>🔊 ${snd.split('/')[1]}<br>🖼 ${hasArt?art.split('/')[1]:'-'}</div>
+    <label class="bad">❌<input type="checkbox" data-i="${i}"></label>`;
+  row.querySelector('button').onclick=()=>{
+    if(cur){cur.pause();cur=null;}
+    document.querySelectorAll('.row').forEach(r=>r.classList.remove('playing'));
+    cur=new Audio(encodeURI(snd)); cur.play();
+    row.classList.add('playing');
+  };
+  row.querySelector('input').onchange=update;
+  list.appendChild(row);
+});
+function update(){
+  const bad=[...document.querySelectorAll('input:checked')].map(c=>PAIRS[+c.dataset.i]);
+  if(!bad.length){rep.style.display='none';return;}
+  rep.style.display='block';
+  rep.innerHTML='<b>어긋난 쌍 '+bad.length+'개:</b> '+bad.map(b=>b[0]+' (🔊'+b[1].split('/')[1]+')').join(' · ')
+    +'<br>→ 이 사운드 파일들의 내용물이 이름과 다릅니다. 파일을 교체하거나 어떤 소리인지 알려주세요.';
+}
+</script>
+</body>
+</html>
