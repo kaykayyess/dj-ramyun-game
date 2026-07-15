@@ -124,7 +124,6 @@ const SFX_FILES={
   bul1:'BURR Play.wav', bul2:'BURR2 Play.wav', bul3:'BURR3 Play.wav', bul4:'BURR4 Play.wav',
   jja1:'JJAP Play.wav', jja2:'JJAP2 Play.wav', jja3:'JJAP3 Play.wav', jja4:'JJAP4 Play.wav',
   neo1:'NEO Play.wav',  neo2:'NEO2 Play.wav',  neo3:'NEO3 Play.wav', neo4:'NEO4 Play.wav',
-  drop_voice:'BURR_JJPA drop_the_sauce_and_feast.mp3',
   guri1:'jjapagury play.mp3', guri2:'jjapagury2 play.mp3'
 };
 for(const k in SFX_FILES)          /* prefetch at load — decode after first tap unlocks audio */
@@ -164,7 +163,7 @@ function playBuf(k,v=1,rate=1,o={}){
   const vv=v*((A.norm&&A.norm[k])||1);
   const g=A.ctx.createGain(); g.gain.value=vv;
   src.connect(g); g.connect(A.master); src.start(0,off);
-  if(k!=='drop_voice') bgmDuck();
+  bgmDuck();
   if(o.dur){                         /* trim long stingers with a clean fade */
     g.gain.setValueAtTime(vv,t+Math.max(0.05,o.dur-0.3));
     g.gain.linearRampToValueAtTime(0,t+o.dur);
@@ -2166,7 +2165,7 @@ function drawMiniBowl(x,y,w,fk,t,tilt){
     ctx.fillStyle=F.deep;
     ctx.beginPath(); ctx.ellipse(0,-h*0.3,w*0.43,h*0.12,0,0,7); ctx.fill();
   }
-  ctx.strokeStyle=dryB?(fk==='jjapa'?'#7A4A20':'#E8843C'):'#F6D468';
+  ctx.strokeStyle=dryB?(fk==='jjapa'?'#6E4419':fk==='jjaguri'?'#7A4A20':'#E0512E'):'#F6D468';
   ctx.lineWidth=w*(dryB?0.034:0.028); ctx.lineCap='round';
   for(let i=-1;i<=(dryB?2:1);i++){
     const nx=i*w*0.12, wob=Math.sin(t*5+i*1.7)*w*0.03;
@@ -2217,10 +2216,12 @@ function drawEat(){
     const L=R*2.3*grow*(1-eatP);
     if(L>R*0.08){
       ctx.lineCap='round';
+      const NC={buldak:['#E85A2E','#D6491F'],jjapa:['#6E4419','#5A360F'],
+                jjaguri:['#7A4A20','#684018']}[G.eat.flavor]||['#F6D468','#EEC348'];
       for(let i=0;i<10;i++){
         const sx=(i-4.5)*R*0.038;
         const li=L*(0.72+((i*37)%10)/10*0.38);
-        ctx.strokeStyle=i%2?'#F6D468':'#EEC348'; ctx.lineWidth=R*0.045;
+        ctx.strokeStyle=NC[i%2]; ctx.lineWidth=R*0.045;
         ctx.beginPath();
         for(let k=0;k<=14;k++){
           const u=k/14;
@@ -2317,7 +2318,9 @@ function drawPads(R){
       rr(ctx,x+2,fy+2,w-4,h-4,rad*0.85); ctx.stroke();
       ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1.4;
       rr(ctx,x+5,fy+5,w-10,h*0.34,rad*0.7); ctx.stroke();
-      steamIcon(ctx,x+w/2,fy+h*0.31,w*0.25,F.color,3.6,p.key);
+      if(pr>0){ ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=20*pr; }
+      steamIcon(ctx,x+w/2,fy+h*0.31,w*0.25,pr>0?'#ffffff':F.color,3.6,p.key);
+      if(pr>0) ctx.restore();
       txt(p.label,x+w/2,fy+h*0.63,w*0.2,'#fff','center',F_SANS,'900');
       txt(F.ko,x+w/2,fy+h*0.85,w*0.18,'rgba(255,255,255,0.55)','center',F_SANS,'700');
       if(pr>0&&pr<0.92){                          // release ripple
@@ -2339,10 +2342,11 @@ function drawPads(R){
       ctx.beginPath(); ctx.ellipse(cx+2,cy+6,rad,rad*0.96,0,0,7); ctx.fill();
       ctx.fillStyle='#2b2b30';                    // 실제 제품 버튼처럼 짙은 그레이 베젤
       ctx.beginPath(); ctx.arc(cx,cy,rad,0,7); ctx.fill();
-      if(pr>0){ ctx.shadowColor='#fff'; ctx.shadowBlur=34*pr; }
-      ctx.strokeStyle=`rgba(255,255,255,${0.4+0.6*pr})`;
-      ctx.lineWidth=3.5+pr*2.5;
-      ctx.beginPath(); ctx.arc(cx,cy,rad*0.88,0,7); ctx.stroke();
+      /* 실제 제품처럼 버튼 가장자리를 감싸는 화이트 LED 링 — 누르면 점등 */
+      ctx.shadowColor='#fff'; ctx.shadowBlur=8+34*pr;
+      ctx.strokeStyle=`rgba(255,255,255,${0.3+0.7*pr})`;
+      ctx.lineWidth=4+pr*3;
+      ctx.beginPath(); ctx.arc(cx,cy,rad*0.94,0,7); ctx.stroke();
       ctx.shadowBlur=0;
       const sc=1-pr*0.06;
       const fg=ctx.createRadialGradient(cx-rad*0.3,cy-rad*0.35,rad*0.08,cx,cy,rad*0.8);
