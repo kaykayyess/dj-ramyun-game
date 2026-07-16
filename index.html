@@ -2778,19 +2778,23 @@ function drawEat(){
   const cy=SH*0.44;
   ctx.save(); ctx.globalAlpha=clamp(a,0,1);
   /* small warm spotlight — keeps the play field visible */
-  const g=ctx.createRadialGradient(SW*0.64,cy,8,SW*0.64,cy,SW*0.3);
-  g.addColorStop(0,'rgba(255,240,200,0.42)'); g.addColorStop(1,'rgba(255,240,200,0)');
-  ctx.fillStyle=g; ctx.fillRect(SW*0.32,cy-SW*0.32,SW*0.64,SW*0.64);
+  const g=ctx.createRadialGradient(SW*0.76,SH*0.4,8,SW*0.76,SH*0.4,SW*0.32);
+  g.addColorStop(0,'rgba(255,240,200,0.4)'); g.addColorStop(1,'rgba(255,240,200,0)');
+  ctx.fillStyle=g; ctx.fillRect(SW*0.44,SH*0.4-SW*0.32,SW*0.64,SW*0.64);
 
   const happy=t>=SLURP, ht=t-SLURP;
   const bob=happy? -Math.abs(Math.sin(ht*9))*SH*0.014*Math.max(0,1-ht*1.1)
                  : Math.sin(t*9)*SH*0.004;
-  const R=SW*0.07, fx=SW*0.72, fy=cy-SH*0.02+bob;
+  const R=SW*0.095, fx=SW*0.79, fy=SH*0.365+bob;     /* 얼굴 확대 — 3D 냄비에서 바로 먹는다 */
   const mo={x:fx-R*0.34,y:fy+R*0.5};                 /* mouth anchor */
 
-  /* small bowl in front of the customer */
-  const bw=SW*0.15, bx=SW*0.53, by=cy+SH*0.035;
-  drawMiniBowl(bx,by,bw,G.eat.flavor,G.time,-0.12+Math.sin(t*6)*0.03);
+  /* 3D 냄비 림의 실제 화면 좌표 (냄비 크기 따라 정확히 추적) */
+  let potS={x:SW*0.55,y:SH*0.52};
+  if(T3.ok&&T3.pot&&window.THREE){
+    const v=new THREE.Vector3(0.08,0.5,0.12);   /* 냄비 입구 중앙 */
+    T3.pot.localToWorld(v); v.project(T3.camera);
+    potS={x:(v.x*0.5+0.5)*VW-SX, y:(1-(v.y*0.5+0.5))*VH};
+  }
 
   const sp=G.eat.spice||0, srv=G.eat.serv||1;
   const eff=G.eat.flavor==='jjaguri'?srv*2:srv;       /* 짜파구리 1개=2봉지 */
@@ -2917,7 +2921,7 @@ function drawEat(){
     const grow=easeOut(clamp(p/0.26,0,1));           /* pick up from the bowl */
     const liftP=easeOut(clamp((p-0.26)/0.36,0,1));   /* carry to the mouth   */
     const eatP=easeIn(clamp((p-0.62)/0.34,0,1));     /* whole bite goes in   */
-    const bt={x:bx+bw*0.04,y:by-bw*0.3};
+    const bt={x:potS.x,y:potS.y};                   /* 3D 냄비에서 바로 집어 올린다 */
     const mid={x:(bt.x+mo.x)/2,y:Math.min(bt.y,mo.y)-R*1.35};
     const v=1-liftP;
     const pin={x:v*v*bt.x+2*v*liftP*mid.x+liftP*liftP*mo.x,
@@ -2959,7 +2963,7 @@ function drawEat(){
       ctx.stroke();
     }
     /* wobbling slurp title */
-    ctx.save(); ctx.translate(SW*0.895,cy-SH*0.055); ctx.rotate(-0.06+Math.sin(t*7)*0.04);   /* 얼굴 오른쪽 위 */
+    ctx.save(); ctx.translate(SW*0.86,fy-R*1.75); ctx.rotate(-0.06+Math.sin(t*7)*0.04);   /* 커진 얼굴 위 오른쪽 */
     const slk=['t_slurp','t_slurp2','t_chop'][G.bowls%3];   /* 그릇마다 다른 먹방 타이포 */
     const slsc={t_slurp:0.72,t_slurp2:1,t_chop:1}[slk];      /* 후루룹은 레터링이 캔버스를 꽉 채워서 보정 */
     if(!drawArt(slk,0,0,SH*0.26*slsc)) txtO(i18n('slurp'),0,0,SW*0.09,'#fff','rgba(20,10,0,0.85)',SW*0.018);
@@ -2967,7 +2971,7 @@ function drawEat(){
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
     const pop=easeOut(ht/0.16);
-    ctx.save(); ctx.translate(SW*0.71,cy-SH*0.15); ctx.scale(pop,pop); ctx.rotate(Math.sin(ht*5)*0.04);
+    ctx.save(); ctx.translate(SW*0.74,fy+R*2.05); ctx.scale(pop,pop); ctx.rotate(Math.sin(ht*5)*0.04);
     const spq=sp>=4?i18n('spq4'):sp>=3?i18n('spq3'):sp>=2?i18n('spq2'):sp>=1?i18n('spq1'):full?i18n('eat_full'):mukbang?i18n('eat_mukbang'):null;
     txtO(spq||i18n('cq_'+G.eat.customer),0,0,SW*0.037,'#fff','rgba(20,10,0,0.85)',SW*0.008);
     ctx.restore();
@@ -2987,9 +2991,9 @@ function drawEat(){
         ctx.beginPath(); ctx.arc(fx+R*1.15,cyy,R*0.3,0,7); ctx.fill(); ctx.stroke();
         txt(i18n('tip'),fx+R*1.15,cyy+1,R*0.28,'#7a4a08','center',F_SANS,'900');
         ctx.restore(); }
-      txtO('PERFECT!!',SW*0.68,cy+SH*0.075,SW*0.036,'#ffe95e','#7a2c00',SW*0.008);
+      txtO('PERFECT!!',SW*0.74,fy+R*2.75,SW*0.036,'#ffe95e','#7a2c00',SW*0.008);
     }
-    txt(`+${G.eat.bonus}${G.eat.heart?'  ♥+1':''}`,SW*0.68,cy+SH*0.106,SW*0.026,'#fff','center',F_ARCADE,'400');
+    txt(`+${G.eat.bonus}${G.eat.heart?'  ♥+1':''}`,SW*0.74,fy+R*3.3,SW*0.026,'#fff','center',F_ARCADE,'400');
   }
   /* floating hearts */
   for(let i=0;i<3;i++){
