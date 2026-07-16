@@ -2581,7 +2581,7 @@ function drawGame(){
       ctx.restore();
       /* 몰려든 손님이 한 마디씩 — 맛집 인증 드립 (주문 말풍선과 합쳐 화면 최대 2개) */
       const bubBudget=2-Math.min(2,G.toasts.length);
-      if(bubBudget>0){ const cyc=12, tq=G.time%cyc, idx=(G.time/cyc)|0;   /* 12초에 한 번: Q→A 티키타카 후 한참 조용 */
+      if(bubBudget>0){ const cyc=35, tq=G.time%cyc, idx=(G.time/cyc)|0;   /* 35초에 한 번만 — 가끔 나와야 재밌다 */
         const pairId=((idx*3)%8);                            /* 8쌍 전부 돌기 전엔 같은 드립 반복 없음 */
         const drawBub=(msg,odd,t0,dur)=>{
           const tt2=tq-t0; if(tt2<0||tt2>dur) return;
