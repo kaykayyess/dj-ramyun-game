@@ -855,7 +855,8 @@ function applyJudge(j,note){
       played=playBuf('guri'+serv,vol*0.61,1,{group:'play',cut:'fast',skipSilence:true})
            ||playBuf('jja'+serv,vol*0.58,1,{group:'play',cut:'fast',skipSilence:true});
     else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.58,1,{group:'play',skipSilence:true});
-    if(played) spawnFX({kind:'drop',flavor:note.flavor,serv,t0:G.time+0.18});   /* 사운드가 뜨고 반박자 뒤 타이포 — 싱크 무드 */
+    const oLat=(A.ctx&&(A.ctx.outputLatency||A.ctx.baseLatency))||0;   /* 에어팟/블루투스 지연 보정 */
+    if(played) spawnFX({kind:'drop',flavor:note.flavor,serv,t0:G.time+0.18+Math.min(0.45,oLat)});
     else dropFX(note.flavor,vol);
     G.flash=0.45; G.flashCol=hex2rgb(FLAVORS[note.flavor].color);
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
@@ -978,6 +979,7 @@ function update(dt){
   }
   if(G.dying && G.time-G.dying>1.15){
     if(G.score>G.best){ G.best=G.score; localStorage.setItem('djr_best',G.best); G.newBest=true; }
+    lbSubmit(G.score);
     setState('over');
   }
 }
@@ -2861,7 +2863,8 @@ function drawEat(){
     /* wobbling slurp title */
     ctx.save(); ctx.translate(SW*0.895,cy-SH*0.055); ctx.rotate(-0.06+Math.sin(t*7)*0.04);   /* 얼굴 오른쪽 위 */
     const slk=['t_slurp','t_slurp2','t_chop'][G.bowls%3];   /* 그릇마다 다른 먹방 타이포 */
-    if(!drawArt(slk,0,0,SH*0.26)) txtO(i18n('slurp'),0,0,SW*0.09,'#fff','rgba(20,10,0,0.85)',SW*0.018);
+    const slsc={t_slurp:0.72,t_slurp2:1,t_chop:1}[slk];      /* 후루룹은 레터링이 캔버스를 꽉 채워서 보정 */
+    if(!drawArt(slk,0,0,SH*0.26*slsc)) txtO(i18n('slurp'),0,0,SW*0.09,'#fff','rgba(20,10,0,0.85)',SW*0.018);
     ctx.restore();
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
@@ -3046,6 +3049,7 @@ function drawAttract(){
   if(G.best>0){ ledTxt(`BEST ${String(G.best).padStart(7,'0')}`,SW/2,SH*0.92,SW*0.028,'center'); }
   txt('DJ Ramyun by 808hertz®',SW/2,SH*0.958,SW*0.026,'rgba(255,255,255,0.45)','center',F_ARCADE,'400');
   txt('Game produced by OKWON',SW/2,SH*0.985,SW*0.016,'rgba(255,255,255,0.6)','center',F_ARCADE,'400');
+  txt(BUILD,SW*0.045,SH*0.985,SW*0.013,'rgba(255,255,255,0.25)','left',F_ARCADE,'400');
   /* 🌐 언어 전환 pill (우상단) */
   {
     const ltxt='🌐 '+I18N_NAMES[LANG];
@@ -3063,7 +3067,48 @@ function drawAttract(){
   ctx.restore();
 }
 
-/* 리더보드 — 백엔드 없이 브랜드풍 DJ 차트에 플레이어 점수가 끼어든다 */
+const BUILD='v0716c';
+/* ---------- 글로벌 실시간 랭킹 (Firebase Firestore REST) ----------
+   웹·iOS·Android 앱이 전부 같은 코드라 하나의 리더보드 공유.
+   활성화: FIREBASE에 projectId/apiKey 채우면 끝 — 비어 있으면 로컬 차트로 동작. */
+const FIREBASE={projectId:'',apiKey:''};
+function lbTag(){
+  let t=null; try{t=localStorage.getItem('djr_tag');}catch(e){}
+  if(!t){ t='DJ-'+Math.random().toString(36).slice(2,6).toUpperCase();
+    try{localStorage.setItem('djr_tag',t);}catch(e){} }
+  return t;
+}
+async function lbSync(){
+  if(!FIREBASE.projectId) return;
+  try{
+    const r=await fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents:runQuery?key=${FIREBASE.apiKey}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({structuredQuery:{from:[{collectionId:'scores'}],
+         orderBy:[{field:{fieldPath:'s'},direction:'DESCENDING'}],limit:20}})});
+    const d=await r.json();
+    const seen=new Set(), rows=[];
+    for(const x of (Array.isArray(d)?d:[])){
+      if(!x.document||!x.document.fields) continue;
+      const f=x.document.fields;
+      const n=String((f.n&&f.n.stringValue)||'DJ').slice(0,12);
+      const sc=+((f.s&&(f.s.integerValue||f.s.doubleValue))||0);
+      if(n===lbTag()||seen.has(n)) continue;              /* 내 기록·중복 닉은 제외 (YOU로 합류) */
+      seen.add(n); rows.push({n,s:sc});
+      if(rows.length>=10) break;
+    }
+    if(rows.length) G.remoteLB=rows;
+  }catch(e){}
+}
+async function lbSubmit(score){
+  if(!FIREBASE.projectId||!score) return;
+  try{
+    await fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/scores?key=${FIREBASE.apiKey}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({fields:{n:{stringValue:lbTag()},s:{integerValue:String(score)},t:{integerValue:String(Date.now())}}})});
+    lbSync();
+  }catch(e){}
+}
+/* 리더보드 — Firebase 미설정 시 브랜드풍 DJ 차트에 플레이어 점수가 끼어든다 */
 const LB_BOARD=[
   {n:'808 KING',s:198400},{n:'DJ GOCHU',s:176250},{n:'NOODLE NAS',s:152900},
   {n:'MC BROTH',s:131600},{n:'SEOUL SLURP',s:118300},{n:'KIMCHI K',s:99750},
@@ -3071,7 +3116,8 @@ const LB_BOARD=[
 ];
 function leaderboard(){
   const best=Math.max(G.best||0,G.score||0);
-  const all=LB_BOARD.map(b=>({n:b.n,s:b.s})).concat([{n:'YOU',s:best,you:true}]);
+  const base=(G.remoteLB&&G.remoteLB.length)?G.remoteLB:LB_BOARD;
+  const all=base.map(b=>({n:b.n,s:b.s})).concat([{n:'YOU',s:best,you:true}]);
   all.sort((a,b)=> b.s-a.s || (a.you?-1:b.you?1:0));
   const rank=all.findIndex(x=>x.you)+1;
   let rows;
@@ -3322,6 +3368,7 @@ window.DJ={G,A,T3,anow:()=>anow(),pnow:()=>pnow(),noShift:false,padTap:(p)=>padT
   forceState:(s)=>{G.state=s;G.stateT=G.time;},step:()=>frame(performance.now())};
 
 resize();
+lbSync();
 initAudio();   /* suspended 상태로 미리 생성 — 디코딩은 가능, 소리는 첫 터치에 resume */
 init3D();
 requestAnimationFrame(loop);
