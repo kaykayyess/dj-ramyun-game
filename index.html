@@ -3004,10 +3004,10 @@ function drawEat(){
     ctx.fillStyle='#3A2412';
     ctx.beginPath(); ctx.arc(hdx,hdy,R*0.085,0,7); ctx.fill();
     /* wobbling slurp title */
-    ctx.save(); ctx.translate(SW*0.87,SH*0.555); ctx.rotate(-0.08+Math.sin(t*7)*0.04);   /* 기계 오른쪽 — 얼굴·면발·레일 모두 안 가림 */
+    ctx.save(); ctx.translate(SW*0.9,fy-R*0.1); ctx.rotate(-0.08+Math.sin(t*7)*0.04);   /* 입 바로 옆 — 먹는 소리는 얼굴에 딱 붙게 */
     const slk=['t_slurp','t_slurp2','t_chop'][G.bowls%3];   /* 그릇마다 다른 먹방 타이포 */
     const slsc={t_slurp:0.72,t_slurp2:1,t_chop:1}[slk];      /* 후루룹은 레터링이 캔버스를 꽉 채워서 보정 */
-    if(!drawArt(slk,0,0,SH*0.19*slsc)) txtO(i18n('slurp'),0,0,SW*0.07,'#fff','rgba(20,10,0,0.85)',SW*0.014);
+    if(!drawArt(slk,0,0,SH*0.17*slsc)) txtO(i18n('slurp'),0,0,SW*0.065,'#fff','rgba(20,10,0,0.85)',SW*0.013);
     ctx.restore();
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
