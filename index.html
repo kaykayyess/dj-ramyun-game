@@ -2632,15 +2632,15 @@ function drawGame(){
       if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
       const sc=0.85+0.35*easeOut(t/0.3);            /* 천천히 차오르는 팝인 */
       ctx.save(); ctx.globalAlpha=Math.min(1,t/0.12)*(1-easeIn((t-0.15)/1.0));
-      ctx.translate(SW*0.52,SH*0.35); ctx.scale(sc,sc);   /* 레일 아래 — 노트 시야 확보 */
+      ctx.translate(SW*0.42,SH*0.35); ctx.scale(sc,sc);   /* 레일 아래 — 커진 만큼 왼쪽으로(우측 겹침 방지) */
       const sv=clamp(f.serv||1,1,4);
       const pk=f.flavor==='jjaguri'?null:'p_'+SFX_KEY[f.flavor]+sv;
       /* 폴백 문구 = 실제 아트 파일의 문구와 인분별로 1:1 일치 → SVG 미로드(모바일 초반)에도 정확한 타이포 */
       const fbtxt = f.flavor==='jjaguri'
         ? (sv>=2?'JJAPAGURI ×2!!':'JJAPAGURI!!')
         : (FB_TYPO[SFX_KEY[f.flavor]]||[])[sv-1];
-      if(!(pk&&drawArt(pk,0,0,SW*0.32)) && fbtxt)
-        comicText(fbtxt,0,0,SW*0.046,'#F5E056');
+      if(!(pk&&drawArt(pk,0,0,SW*0.48)) && fbtxt)   /* +50% */
+        comicText(fbtxt,0,0,SW*0.069,'#F5E056');
       ctx.restore();
     }else if(f.kind==='artslam'){
       if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
