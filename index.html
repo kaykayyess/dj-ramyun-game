@@ -591,12 +591,18 @@ A.bgmAnchor=0; A.bgmBpm=0;
 /* beat1 = 타이틀곡(풀 재생) · beat2~6 = 게임 진행 비트, beat5 = 피버/드랍 */
 const BGM_FILES={};
 for(let i=1;i<=6;i++) BGM_FILES['beat'+i]=['beat'+i+'.mp3','beat'+i+'.wav','BEAT'+i+'.mp3','Beat'+i+'.mp3'];
+/* 매 판 새로 섞는 플레이리스트 — 판 안에서는 결정적이라 노트 그리드 BPM과 항상 일치 */
+const BEAT_POOL=['beat2','beat3','beat4','beat6'];   /* beat1=대표곡(시작) · beat5=피버 전용 */
+function shuffleBeats(){
+  const pool=BEAT_POOL.slice();
+  for(let i=pool.length-1;i>0;i--){ const j=irand(0,i); const t=pool[i]; pool[i]=pool[j]; pool[j]=t; }
+  G.playlist=pool;
+}
 /* 주문 번호에 따라 어떤 비트가 깔릴지 — 노트 그리드 BPM과 음악을 일치시키는 단일 기준 */
 function beatTierForOrder(no){
-  if(no>=19) return 'beat6';
-  if(no>=13) return 'beat4';
-  if(no>=7)  return 'beat3';
-  return 'beat2';
+  if(no<=6) return 'beat1';                          /* 시작은 대표곡 */
+  const pl=(G.playlist&&G.playlist.length)?G.playlist:BEAT_POOL;
+  return pl[Math.floor((no-7)/6)%pl.length];         /* 이후 6주문마다 랜덤 순서로 순환 */
 }
 /* 실제 로드된 버퍼로 폴백 (파일이 아직 없거나 디코딩 전이면 있는 것 사용) */
 function resolveBeat(want){
@@ -825,6 +831,7 @@ function startGame(){
   G.notes=[]; G.noteIdx=0; G.bpm=96; G.fever=false; G.dying=0; G.newBest=false;
   G.fx.length=0; G.toasts.length=0; G.confetti.length=0; G.curOrderNo=0; G.curSection=''; G.eat=null; G.eatOut=null; G.drop=0; G.dropT0=0;
   G.tut=!window.__tutDone;   /* 접속마다 첫 판은 연습 손님 — 같은 세션 재도전은 생략 */
+  shuffleBeats();            /* 판마다 곡 순서가 달라진다 */
   G.space=0;                 /* 우주는 매 판 다시 열어야 한다 */
   G.hypeLv=0;                /* 맛집 명성도 매 판 다시 쌓는다 */
   G.scroll=0.27;         /* 첫 판이면 1번 주문 = 연습 모드 */
