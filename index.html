@@ -988,9 +988,12 @@ function update(dt){
    FX
    ========================================================= */
 function spawnFX(o){
-  const BIG=['banner','drop','artslam'];
-  if(BIG.includes(o.kind)) G.fx=G.fx.filter(f=>!BIG.includes(f.kind));
-  if(G.fx.length<80) G.fx.push(o);
+  /* 플레이 타이포('drop')는 사운드와 짝 — 배너·축포에 절대 지워지면 안 된다.
+     drop끼리만(최신 우선), 배너/슬램끼리만 정리 — 서로는 안 건드림 */
+  if(o.kind==='drop') G.fx=G.fx.filter(f=>f.kind!=='drop');
+  else if(o.kind==='banner'||o.kind==='artslam')
+    G.fx=G.fx.filter(f=>f.kind!=='banner'&&f.kind!=='artslam');
+  if(o.kind==='drop'||G.fx.length<80) G.fx.push(o);   /* 타이포는 캡 무시하고 항상 표시 */
 }
 function updateFX(dt){
   G.fx=G.fx.filter(f=>G.time-f.t0 < ((f.kind==='banner'||f.kind==='artslam')?1.4:f.kind==='drop'?1.15:0.8));
@@ -3216,60 +3219,73 @@ function drawGameover(){
 function shareScore(){
   const c=document.createElement('canvas'); c.width=1080; c.height=1350;
   const g=c.getContext('2d');
-  /* 다크 프리미엄 + 별밤 배경 */
   const bg=g.createLinearGradient(0,0,0,1350);
-  bg.addColorStop(0,'#241808'); bg.addColorStop(0.5,'#130d06'); bg.addColorStop(1,'#0a0604');
+  bg.addColorStop(0,'#241706'); bg.addColorStop(0.55,'#130d06'); bg.addColorStop(1,'#090603');
   g.fillStyle=bg; g.fillRect(0,0,1080,1350);
-  for(let i=0;i<70;i++){ const st=STARS[i];
-    g.globalAlpha=0.2+st.c*0.5; g.fillStyle=st.c>0.8?'#ffe9b8':'#fff';
-    g.beginPath(); g.arc(st.x*1080,st.y*800,st.r*1.7,0,7); g.fill(); }
+  for(let i=0;i<46;i++){ const st=STARS[i];
+    g.globalAlpha=0.1+st.c*0.32; g.fillStyle='#fff';
+    g.beginPath(); g.arc(st.x*1080,st.y*1350,st.r*1.3,0,7); g.fill(); }
   g.globalAlpha=1;
-  /* 골드 프레임 */
-  g.strokeStyle='rgba(245,179,27,0.75)'; g.lineWidth=6;
-  rr(g,26,26,1028,1298,46); g.stroke();
-  g.strokeStyle='rgba(245,179,27,0.22)'; g.lineWidth=2;
-  rr(g,40,40,1000,1270,38); g.stroke();
-  g.textAlign='center'; g.textBaseline='alphabetic';
-  /* 공식 로고 */
-  const lg=ART.logo;
-  if(lg&&lg.complete&&lg.naturalWidth){ const w=290; g.drawImage(lg,540-w/2,58,w,w*lg.height/lg.width); }
-  else { g.font=`110px ${F_DISP}`; g.fillStyle='#F5B31B'; g.fillText('DJ Ramyun',540,180); }
-  /* 순위 — 자랑 포인트 */
+  g.strokeStyle='rgba(245,179,27,0.5)'; g.lineWidth=5; rr(g,28,28,1024,1294,44); g.stroke();
+  g.textAlign='center'; g.textBaseline='middle';
   const LB=leaderboard();
-  const medal=LB.rank<=3?['🥇','🥈','🥉'][LB.rank-1]+' ':'';
-  g.font=`900 62px ${F_SANS}`; g.fillStyle='#fff';
-  g.fillText(medal+'🌍 '+i18n('share_rank',LB.rank),540,435);
-  g.font=`800 34px ${F_SANS}`; g.fillStyle='rgba(245,179,27,0.75)';
-  g.fillText('DJ RAMYUN CHART · TOP 10',540,485);
-  /* 점수 */
-  g.font=`44px ${F_ARCADE}`; g.fillStyle='rgba(245,179,27,0.6)'; g.fillText('FINAL SCORE',540,570);
-  const sg=g.createLinearGradient(0,600,0,710); sg.addColorStop(0,'#FFE07A'); sg.addColorStop(1,'#F5B31B');
-  g.font=`140px ${F_ARCADE}`; g.fillStyle=sg; g.fillText(String(G.score).padStart(7,'0'),540,705);
-  g.font=`600 36px ${F_SANS}`; g.fillStyle='rgba(255,255,255,0.55)';
-  g.fillText(i18n('share_stats',G.bowls,G.perfectOrders,G.maxCombo),540,765);
-  /* 밈 판정 — 티어별 */
+
+  /* 1) 로고 */
+  const lg=ART.logo;
+  if(lg&&lg.complete&&lg.naturalWidth){ const w=230; g.drawImage(lg,540-w/2,86,w,w*lg.height/lg.width); }
+  else { g.font=`96px ${F_DISP}`; g.fillStyle='#F5B31B'; g.fillText('DJ Ramyun',540,180); }
+
+  /* 2) HERO — 밈 판정 (감정 훅) */
   const sv=G.score>=120000?'sv4':G.score>=60000?'sv3':G.score>=20000?'sv2':'sv1';
-  g.save(); g.translate(540,870); g.rotate(-0.02);
-  g.font=`900 58px ${F_SANS}`; g.lineJoin='round';
-  g.lineWidth=14; g.strokeStyle='#000'; g.strokeText(i18n(sv),0,0);
-  g.fillStyle='#FFE07A'; g.fillText(i18n(sv),0,0); g.restore();
-  /* 도발 말풍선 */
+  let vt=i18n(sv), vfs=70; g.font=`900 ${vfs}px ${F_SANS}`;
+  while(g.measureText(vt).width>900&&vfs>42){ vfs-=2; g.font=`900 ${vfs}px ${F_SANS}`; }
+  g.save(); g.translate(540,392);
+  g.lineJoin='round'; g.lineWidth=vfs*0.24; g.strokeStyle='#000'; g.strokeText(vt,0,0);
+  g.fillStyle='#FFE07A'; g.fillText(vt,0,0); g.restore();
+
+  /* 3) 성적 카드 — 순위(플렉스) + 점수 */
+  const cardY=500, cardH=310;
+  const cardG=g.createLinearGradient(0,cardY,0,cardY+cardH);
+  cardG.addColorStop(0,'rgba(245,179,27,0.14)'); cardG.addColorStop(1,'rgba(245,179,27,0.05)');
+  g.fillStyle=cardG; rr(g,110,cardY,860,cardH,40); g.fill();
+  g.strokeStyle='rgba(245,179,27,0.4)'; g.lineWidth=2; rr(g,110,cardY,860,cardH,40); g.stroke();
+  /* 순위 pill */
+  const rtxt='🌍 '+i18n('share_rank',LB.rank);
+  g.font=`900 58px ${F_SANS}`;
+  const pw=g.measureText(rtxt).width+70;
+  g.fillStyle='#e0301e'; rr(g,540-pw/2,cardY-38,pw,76,38); g.fill();
+  g.fillStyle='#fff'; g.fillText(rtxt,540,cardY+2);
+  /* 점수 */
+  g.font=`30px ${F_ARCADE}`; g.fillStyle='rgba(245,179,27,0.65)'; g.fillText('SCORE',540,cardY+108);
+  const sg=g.createLinearGradient(0,cardY+130,0,cardY+215); sg.addColorStop(0,'#FFE884'); sg.addColorStop(1,'#F2A31A');
+  g.font=`96px ${F_ARCADE}`; g.fillStyle=sg; g.fillText(String(G.score).padStart(6,'0'),540,cardY+178);
+  g.font=`600 30px ${F_SANS}`; g.fillStyle='rgba(255,255,255,0.5)';
+  g.fillText(i18n('share_stats',G.bowls,G.perfectOrders,G.maxCombo),540,cardY+258);
+
+  /* 4) 도전 말풍선 */
   const chT=i18n('challenge');
-  g.font=`800 40px ${F_SANS}`;
-  const cw2=g.measureText(chT).width+90;
-  g.fillStyle='#FBF3E2'; rr(g,540-cw2/2,935,cw2,86,43); g.fill();
-  g.beginPath(); g.moveTo(500,1019); g.lineTo(478,1052); g.lineTo(548,1019); g.closePath(); g.fill();
-  g.fillStyle='#2A1B0C'; g.fillText(chT,540,992);
-  /* 상품 */
-  g.font=`900 40px ${F_SANS}`; g.fillStyle='#e8452e';
-  g.fillText('🏆 '+i18n('share_prize1').replace('🏆 ',''),540,1120);
-  g.font=`700 33px ${F_SANS}`; g.fillStyle='rgba(255,255,255,0.6)';
-  g.fillText(i18n('share_prize23'),540,1170);
-  /* CTA + 크레딧 */
-  g.font=`800 36px ${F_SANS}`; g.fillStyle='#F5B31B';
-  g.fillText('▶ kaykayyess.github.io/dj-ramyun-game',540,1245);
-  g.font=`700 27px ${F_SANS}`; g.fillStyle='rgba(245,179,27,0.5)';
-  g.fillText('DJ Ramyun by 808hertz®  ·  Game produced by OKWON',540,1295);
+  g.font=`800 42px ${F_SANS}`;
+  const cw2=g.measureText(chT).width+96;
+  g.fillStyle='#FBF3E2'; rr(g,540-cw2/2,882,cw2,92,46); g.fill();
+  g.beginPath(); g.moveTo(508,972); g.lineTo(486,1008); g.lineTo(560,972); g.closePath(); g.fill();
+  g.fillStyle='#2A1B0C'; g.fillText(chT,540,929);
+
+  /* 5) CTA 버튼 (탭하고 싶게) */
+  const btnY=1055, btnW=760, btnH=104;
+  g.save(); g.shadowColor='rgba(245,179,27,0.6)'; g.shadowBlur=34;
+  const bgr=g.createLinearGradient(0,btnY,0,btnY+btnH); bgr.addColorStop(0,'#FFD34E'); bgr.addColorStop(1,'#F2A31A');
+  g.fillStyle=bgr; rr(g,540-btnW/2,btnY,btnW,btnH,btnH/2); g.fill(); g.restore();
+  g.fillStyle='#1c120a'; g.font=`900 46px ${F_SANS}`;
+  g.fillText('▶ '+i18n('cta_play'),540,btnY+btnH/2);
+  g.font=`700 30px ${F_SANS}`; g.fillStyle='rgba(245,179,27,0.85)';
+  g.fillText('kaykayyess.github.io/dj-ramyun-game',540,btnY+btnH+42);
+
+  /* 6) 상품 티저 + 크레딧 (작게) */
+  g.font=`700 27px ${F_SANS}`; g.fillStyle='rgba(255,255,255,0.4)';
+  g.fillText('🏆 1등 '+i18n('pz1')+'  ·  2등 '+i18n('pz2')+'  ·  3등 '+i18n('pz3'),540,1268);
+  g.font=`600 23px ${F_SANS}`; g.fillStyle='rgba(245,179,27,0.4)';
+  g.fillText('DJ Ramyun by 808hertz®',540,1305);
+
   c.toBlob(async b=>{
     if(!b) return;
     const file=new File([b],'dj-ramyun-score.png',{type:'image/png'});
