@@ -585,23 +585,23 @@ function judgeFX(j){
   else if(j==='bad'){ tone({t,type:'triangle',f0:220,f1:160,dur:0.08,v:0.08}); }
 }
 /* ---------- BGM: 직접 만든 비트 루프 (sfx/BEAT1·BEAT2) ---------- */
-A.MUSIC_BPM={beat1:71.2,beat2:90.56,beat3:92.16};   /* 자기상관 실측값 (3단계 비트) */
-A.MUSIC_VOL={beat1:1.2,beat2:1,beat3:1};            /* beat1 원본이 작아서 +20% */
+A.MUSIC_BPM={beat1:71.2,beat2:90.97,beat3:92.16,beat4:93.84,beat5:86.74,beat6:92.17};   /* 자기상관 실측값 */
+A.MUSIC_VOL={beat1:1.2,beat2:1,beat3:1,beat4:1,beat5:1,beat6:1};   /* beat1 원본이 작아서 +20% */
 A.bgmAnchor=0; A.bgmBpm=0;
-/* 진행형 비트: 초반 beat1(느긋) → 중반 beat2 → 후반/피버 beat3(최고조) */
-const BGM_FILES={beat1:['beat1.mp3','beat1.wav','BEAT1.mp3','Beat1.mp3'],
-                 beat2:['beat2.mp3','beat2.wav','BEAT2.mp3','Beat2.mp3'],
-                 beat3:['beat3.mp3','beat3.wav','BEAT3.mp3','Beat3.mp3']};
+/* beat1 = 타이틀곡(풀 재생) · beat2~6 = 게임 진행 비트, beat5 = 피버/드랍 */
+const BGM_FILES={};
+for(let i=1;i<=6;i++) BGM_FILES['beat'+i]=['beat'+i+'.mp3','beat'+i+'.wav','BEAT'+i+'.mp3','Beat'+i+'.mp3'];
 /* 주문 번호에 따라 어떤 비트가 깔릴지 — 노트 그리드 BPM과 음악을 일치시키는 단일 기준 */
 function beatTierForOrder(no){
-  if(no>=15) return 'beat3';
-  if(no>=7)  return 'beat2';
-  return 'beat1';
+  if(no>=19) return 'beat6';
+  if(no>=13) return 'beat4';
+  if(no>=7)  return 'beat3';
+  return 'beat2';
 }
 /* 실제 로드된 버퍼로 폴백 (파일이 아직 없거나 디코딩 전이면 있는 것 사용) */
 function resolveBeat(want){
   if(A.mbuf[want]) return want;
-  for(const k of ['beat1','beat2','beat3']) if(A.mbuf[k]) return k;
+  for(const k of ['beat2','beat3','beat4','beat6','beat5','beat1']) if(A.mbuf[k]) return k;
   return '';
 }
 A.mraw={}; A.mbuf={}; A.bgm=null; A.bgmKey='';
@@ -638,10 +638,11 @@ function bgmUpdate(){
   if(!A.ctx){ return; }
   if(A.boil){ try{ A.boil.g.gain.setTargetAtTime(0,A.ctx.currentTime,0.2); A.boil.src.stop(A.ctx.currentTime+0.8); }catch(e){} A.boil=null; }
   if(A.muted) return;
-  if(G.state!=='game'){ if(A.bgm) bgmStop(); return; }
+  if(G.state==='over'){ if(A.bgm) bgmStop(); return; }
   for(const k in A.mraw) decodeBGM(k);
-  /* 피버/THE DROP = 항상 최고조 비트(beat3), 아니면 주문 진행에 맞춘 단계 비트 */
-  const wantTier=(G.fever||G.time<G.drop)?'beat3':beatTierForOrder(G.curOrderNo||1);
+  /* 타이틀 = beat1 풀 재생 / 게임 = 진행 비트, 피버·THE DROP = beat5(최고조) */
+  const wantTier = G.state==='attract' ? 'beat1'
+    : (G.fever||G.time<G.drop) ? 'beat5' : beatTierForOrder(G.curOrderNo||1);
   const want=resolveBeat(wantTier);
   if(!want||want===A.bgmKey) return;
   bgmStop();
@@ -695,8 +696,7 @@ function bgmDuck(){                                      /* 사이드체인: 버
 
 function schedulerUpdate(){
   if(!A.ctx||G.state!=='game'||A.muted) return;
-  bgmUpdate();
-  if(A.bgm) return;                                      /* 비트 파일이 돌면 신스 비트는 침묵 */
+  if(A.bgm) return;                                      /* 비트 파일이 돌면 신스 비트는 침묵 (bgmUpdate는 update()가 담당) */
   const spb=60/G.bpm;
   if(A.nextBeat < anow()-0.4) A.nextBeat = anow()+0.05;
   while(A.nextBeat < anow()+0.18){
@@ -819,7 +819,7 @@ function pushTutorialOrder(){
   G.notes.push({type:'play',flavor:f,sec:f,time:t,order,bpm:pb,last:true}); t+=spb*4;   /* PLAY 뒤 넉넉한 텀 */
   G.cursorT=t+spb;
 }
-function setState(s){ G.state=s; G.stateT=G.time; if(s!=='game'&&A.ctx) bgmStop(); }
+function setState(s){ G.state=s; G.stateT=G.time; if(s==='over'&&A.ctx) bgmStop(); }   /* 타이틀곡은 계속 */
 function startGame(){
   G.score=0; G.lives=3; G.combo=0; G.maxCombo=0; G.bowls=0; G.orderCount=0; G.perfectOrders=0;
   G.notes=[]; G.noteIdx=0; G.bpm=96; G.fever=false; G.dying=0; G.newBest=false;
@@ -994,7 +994,8 @@ function hypeTier(){
 /* ---------- flow update ---------- */
 function update(dt){
   updateFX(dt);
-  if(G.state!=='game'){ if(A.bgm) bgmStop(); return; }
+  if(A.ctx) bgmUpdate();                          /* 타이틀곡도 재생되도록 상태 무관 갱신 */
+  if(G.state!=='game') return;
   schedulerUpdate();
   // keep the conveyor stocked
   if(!G.tut && G.cursorT - pnow() < 10) pushOrder();
