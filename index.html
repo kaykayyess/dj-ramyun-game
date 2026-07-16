@@ -2775,7 +2775,9 @@ function drawMiniBowl(x,y,w,fk,t,tilt){
 /* the customer happily slurps every finished bowl — non-blocking */
 function drawEat(){
   if(!G.eat) return;
-  const t=G.time-G.eat.t0, DUR=2.15, SLURP=1.44;
+  const srvE=Math.min(4,(G.eat.flavor==='jjaguri'?2:1)*(G.eat.serv||1));   /* 실질 인분수 */
+  const SLURP=[1.44,2.0,2.5,3.0][srvE-1], DUR=SLURP+0.71;                  /* 많이 먹을수록 오래 */
+  const t=G.time-G.eat.t0;
   if(t>DUR){ G.eat=null; if(T3.ok) T3.serveClear(); return; }   /* 완식 — 빈 그릇 회수 */
   if(T3.ok&&t>=0){                                 /* 먹을수록 3D 면·토핑이 실제로 줄어든다 */
     const keep=Math.max(0.001,1-(t/SLURP));
@@ -2925,7 +2927,9 @@ function drawEat(){
 
   if(!happy){
     /* ---- chopsticks lift a FAT bundle of noodles into the mouth ---- */
-    const c=mukbang?0.52:0.72, p=(t%c)/c;           /* 먹방러는 흡입이 빠르다 */
+    const c=[0.72,0.62,0.55,0.34][srvE-1];          /* 1인분 2번 → 4인분 9연속 후다닥 */
+    const p=(t%c)/c;
+    if(srvE>=4&&p<0.1) G.shake=Math.max(G.shake,2.4);   /* 입질마다 화면이 들썩 */
     const grow=easeOut(clamp(p/0.26,0,1));           /* pick up from the bowl */
     const liftP=easeOut(clamp((p-0.26)/0.36,0,1));   /* carry to the mouth   */
     const eatP=easeIn(clamp((p-0.62)/0.34,0,1));     /* whole bite goes in   */
@@ -2940,15 +2944,16 @@ function drawEat(){
       const NC={buldak:['#E85A2E','#D6491F'],jjapa:['#6E4419','#5A360F'],
                 jjaguri:['#7A4A20','#684018']}[G.eat.flavor]||['#F2C14E','#E8AF35'];
       const HI={buldak:'#FFB07A',jjapa:'#B07F45',jjaguri:'#C08F52'}[G.eat.flavor]||'#FFF0B8';
-      for(let i=0;i<9;i++){
-        const off=(i-4)*R*0.042;
+      const NSTR=srvE>=4?13:9;                       /* 대식가는 한 입에 더 많이 */
+      for(let i=0;i<NSTR;i++){
+        const off=(i-(NSTR-1)/2)*R*0.042;
         const ex0=bt.x+(i-4)*R*0.08, ey0=bt.y+R*0.05;   /* 면 끝은 냄비 입구 속 */
         const ex=lerp(ex0,mo.x,eatP), ey=lerp(ey0,mo.y+R*0.05,eatP);   /* 마지막엔 입으로 후룩 */
         const sag=R*(0.6+((i*29)%7)*0.1)*(1-eatP)*grow;  /* 자연스러운 처짐 */
         const wig=Math.sin(t*9+i*1.7)*R*0.05*(1-eatP);   /* 탱글탱글 진동 */
         const c1x=pin.x+off*2.2+wig, c1y=pin.y+Math.max(0,ey-pin.y)*0.35+sag*0.5;
         const c2x=ex+(pin.x-ex)*0.22-wig, c2y=Math.max(pin.y,ey)+sag;
-        ctx.strokeStyle=NC[i%2]; ctx.lineWidth=R*(mukbang?0.095:0.08);
+        ctx.strokeStyle=NC[i%2]; ctx.lineWidth=R*(srvE>=4?0.1:mukbang?0.095:0.08);
         ctx.beginPath(); ctx.moveTo(pin.x+off,pin.y+R*0.02);
         ctx.bezierCurveTo(c1x,c1y,c2x,c2y,ex,ey); ctx.stroke();
         ctx.save(); ctx.globalAlpha*=0.75;               /* 윤기 하이라이트 */
@@ -2956,6 +2961,12 @@ function drawEat(){
         ctx.beginPath(); ctx.moveTo(pin.x+off,pin.y);
         ctx.bezierCurveTo(c1x,c1y-R*0.04,c2x,c2y-R*0.04,ex,ey-R*0.03); ctx.stroke();
         ctx.restore();
+      }
+      if(srvE>=4){                                       /* 대식가 스피드라인 */
+        ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=R*0.045; ctx.lineCap='round';
+        for(let i2=0;i2<3;i2++){ const a2=-0.7+i2*0.55;
+          ctx.beginPath(); ctx.moveTo(fx+Math.cos(a2)*R*1.35,fy+Math.sin(a2)*R*1.35);
+          ctx.lineTo(fx+Math.cos(a2)*R*1.75,fy+Math.sin(a2)*R*1.75); ctx.stroke(); }
       }
       if(liftP>0.25&&eatP<0.5){                          /* 국물 방울 톡 */
         const dpP=(t*2.6)%1;
