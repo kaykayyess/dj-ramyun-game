@@ -2260,8 +2260,9 @@ function bgFlavor(){
   return n?(n.sec||n.flavor):'ramyun';
 }
 function drawBG(){
+  bgX.setTransform(1,0,0,1,0,0);
+  bgX.fillStyle='#0b0906'; bgX.fillRect(0,0,bgC.width,bgC.height);
   bgX.setTransform(DPR,0,0,DPR,0,0);
-  bgX.fillStyle='#0b0906'; bgX.fillRect(0,0,VW,VH);
   if(G.state==='attract'||G.state==='over'){
     const g=bgX.createRadialGradient(VW/2,SH*0.34,20,VW/2,SH*0.42,SH*0.7);
     g.addColorStop(0,'rgba(245,179,27,0.32)');
@@ -3483,6 +3484,7 @@ window.addEventListener('keydown',e=>{
    ========================================================= */
 let lastT=performance.now();
 function frame(tms){
+  if(VW!==window.innerWidth||VH!==window.innerHeight) resize();   /* 리사이즈 이벤트 유실 자가복구 — 2겹 잔상 방지 */
   const raw=(tms-lastT)/1000;
   // render stalled (hidden tab / panel switch) → shift the timeline so the game pauses instead of failing
   if(G.state==='game' && raw>0.4 && !(window.DJ&&window.DJ.noShift)){
@@ -3496,8 +3498,9 @@ function frame(tms){
   update3D(dt);
   drawBG();
 
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,uiC.width,uiC.height);         /* 백킹 전체 클리어 — 잔상 원천 차단 */
   ctx.setTransform(DPR,0,0,DPR,0,0);
-  ctx.clearRect(0,0,VW,VH);
   if(G.shake>0) ctx.translate(rand(-G.shake,G.shake)*0.5,rand(-G.shake,G.shake)*0.5);
   ctx.translate(SX,0);
   ctx.save();
