@@ -756,15 +756,15 @@ function orderParams(no){
   const mkey=(A.mbuf&&A.mbuf[beatTierForOrder(no)])?beatTierForOrder(no):(A.bgmKey||'');
   const bpm = mkey ? A.MUSIC_BPM[mkey] : Math.min(86+(no-1)*1.8, 160);
   const r=Math.random();
-  const secN = no<=14?1 : no<=20?(r<0.3?2:1) : (r<0.12?3:r<0.6?2:1); /* 한 사람당 보통 1개 */
-  /* 인분 성장 곡선: 1인분만 → 2인분 → 3인분 → 4인분 */
+  const secN = no<=18?1 : no<=26?(r<0.28?2:1) : (r<0.12?3:r<0.55?2:1); /* 한 사람당 보통 1개 */
+  /* 인분 성장 곡선(천천히): 1인분만 → 2인분 섞임 → 3인분 → 4인분. mn을 낮게 둬서 1인분도 계속 나온다 */
   let mn=1,mx=1;
-  if(no>=5){ mx=2; }
-  if(no>=9){ mn=2; mx=3; }
-  if(no>=13){ mn=2; mx=4; }
+  if(no>=8){  mx=2; }                              /* 2인분 등장 */
+  if(no>=15){ mx=3; }                              /* 3인분 등장 */
+  if(no>=22){ mn=2; mx=4; }                        /* 4인분 등장 */
   /* 콤보가 쌓이면 몰아친다 — 미스로 콤보가 깨지면 다시 숨 돌릴 틈 */
   /* 반박자 노트 섞임 비율 — 주문이 쌓일수록, 콤보가 높을수록 서서히 */
-  const dbl = clamp((no-8)/20,0,0.62) + (G.combo>=25?0.12:0) + (G.combo>=50?0.08:0);   /* 후반은 연타 지옥 */
+  const dbl = clamp((no-14)/26,0,0.55) + (G.combo>=30?0.1:0) + (G.combo>=60?0.08:0);   /* 후반은 연타 지옥 (완만하게) */
   return {bpm, secN, mn, mx, dbl:clamp(dbl,0,0.8)};
 }
 function pushOrder(){
@@ -776,11 +776,11 @@ function pushOrder(){
   /* a real order: usually one item, sometimes two, more when the shop gets slammed */
   let pool=[...SEQ];
   const secs=[];
-  if(no>=12 && Math.random()<0.35){ secs.push('jjaguri'); pool=pool.filter(f=>f!=='jjapa'&&f!=='neogury'); }  /* 짜파구리는 4인분 경험 후 해금 */
+  if(no>=24 && Math.random()<0.32){ secs.push('jjaguri'); pool=pool.filter(f=>f!=='jjapa'&&f!=='neogury'); }  /* 짜파구리는 4인분 경험 후 해금 */
   while(secs.length<p.secN && pool.length) secs.push(pool.splice(irand(0,pool.length-1),1)[0]);
   if(!secs.length) secs.push('ramyun');
-  G.diff=Math.min(1,(no-1)/22);                    /* 난이도 지표 (판정창·점수 배율) */
-  const gap = Math.max(1, Math.round(4.4 - no*0.12 - G.combo/16));  /* 후반엔 주문이 거의 연달아 */
+  G.diff=Math.min(1,(no-1)/30);                    /* 난이도 지표 (판정창·점수 배율) */
+  const gap = Math.max(1, Math.round(4.6 - no*0.085 - G.combo/20));  /* 후반엔 주문이 거의 연달아 (천천히) */
   let t=G.cursorT;
   if(A.bgmAnchor&&A.bgmBpm){                       /* 음악 박자선에 스냅 */
     const bl=60/A.bgmBpm;
@@ -1004,7 +1004,7 @@ function update(dt){
     if(ht>(G.hypeLv||0)){ G.hypeLv=ht; spawnFX({kind:'banner',text:i18n('hype'+ht),t0:G.time+0.5}); }
     else if(ht<(G.hypeLv||0)) G.hypeLv=ht; }
   /* 난이도 = 속도감: 주문·콤보에 따라 노트가 넓은 간격 그대로 더 빠르게 흐른다 */
-  const scTgt=0.27+clamp((G.curOrderNo-4)*0.016,0,0.30)+Math.min(0.10,G.combo*0.0018);
+  const scTgt=0.27+clamp((G.curOrderNo-6)*0.012,0,0.28)+Math.min(0.09,G.combo*0.0015);
   G.scroll=lerp(G.scroll,scTgt,Math.min(1,dt*0.7));
   const cn=G.notes[G.noteIdx];
   if(cn){
@@ -2575,7 +2575,7 @@ function drawGame(){
           let fs=h*0.52; ctx.save(); ctx.globalAlpha=clamp(pop,0,1);
           ctx.font=`800 ${fs}px ${F_SANS}`;
           let tw=ctx.measureText(msg).width;
-          if(tw>SW*0.46){ fs*=SW*0.46/tw; tw=SW*0.46; }
+          if(tw>SW*0.46){ fs*=SW*0.46/tw; ctx.font=`800 ${fs}px ${F_SANS}`; tw=ctx.measureText(msg).width; }   /* 재측정 — 이모지 비선형 대비 */
           const w=tw+h*0.9, bx=SW*(odd?0.12:0.045), by=SH*(odd?0.549:0.505);
           const tx=odd?0.32:0.2;                            /* 꼬리 위치도 화자 쪽으로 */
           ctx.translate(bx+w*tx,by+h); ctx.scale(0.75+0.25*pop,0.75+0.25*pop); ctx.translate(-(bx+w*tx),-(by+h));
@@ -2724,8 +2724,10 @@ function drawToasts(){
       const h=SH*0.04;
       let fs=h*0.46; ctx.font=`800 ${fs}px ${F_SANS}`;
       let tw=ctx.measureText(msg).width;
-      const w=Math.min(SW*0.42,tw+h*0.9);
-      if(tw>w-h*0.9){ fs*=(w-h*0.9)/tw; }
+      let w=Math.min(SW*0.42,tw+h*0.9);
+      if(tw>w-h*0.9){ fs*=(w-h*0.9)/tw;
+        ctx.font=`800 ${fs}px ${F_SANS}`; tw=ctx.measureText(msg).width;   /* 재측정 */
+        w=Math.min(SW*0.44,tw+h*0.9); }
       const bx=SW*0.04, by0=SH*0.452+i*(h+8);
       const p=clamp(pop,0,1);
       ctx.save(); ctx.globalAlpha=p;
@@ -3392,15 +3394,21 @@ function drawGameover(){
 
   const LB=leaderboard();
   /* your rank pill */
-  const rt=i18n('rank_fmt',LB.rank);
-  ctx.font=`900 ${SW*0.03}px ${F_SANS}`;
-  const rankTxt=i18n('your_rank')+'  '+rt;
-  const pw=ctx.measureText(rankTxt).width+SW*0.06, ph=SH*0.038, px=SW/2-pw/2, py=Y(0.205);
+  const rt=i18n('rank_fmt',LB.rank), yr=i18n('your_rank');
+  let lblS=SW*0.026, rtS=SW*0.032; const gapS=SW*0.022;
+  ctx.font=`800 ${lblS}px ${F_SANS}`; let lbW=ctx.measureText(yr).width;
+  ctx.font=`900 ${rtS}px ${F_SANS}`; let rkW=ctx.measureText(rt).width;
+  let inner=lbW+gapS+rkW, maxIn=SW*0.7;
+  if(inner>maxIn){ const k=maxIn/inner; lblS*=k; rtS*=k;   /* 긴 언어는 통째로 축소 */
+    ctx.font=`800 ${lblS}px ${F_SANS}`; lbW=ctx.measureText(yr).width;
+    ctx.font=`900 ${rtS}px ${F_SANS}`; rkW=ctx.measureText(rt).width; inner=lbW+gapS+rkW; }
+  const pw=inner+SW*0.07, ph=SH*0.038, px=SW/2-pw/2, py=Y(0.205);
   ctx.fillStyle=G.newBest?'#e0301e':'rgba(245,179,27,0.16)';
   rr(ctx,px,py,pw,ph,ph/2); ctx.fill();
   if(!G.newBest){ ctx.strokeStyle='rgba(245,179,27,0.5)'; ctx.lineWidth=1.5; rr(ctx,px,py,pw,ph,ph/2); ctx.stroke(); }
-  txt(i18n('your_rank'),px+pw*0.5-SW*0.028,py+ph/2,SW*0.026,G.newBest?'rgba(255,255,255,0.8)':'rgba(245,179,27,0.85)','right',F_SANS,'800');
-  txt(rt,px+pw*0.5+SW*0.02,py+ph/2,SW*0.032,'#fff','center',F_SANS,'900');
+  const ix=px+(pw-inner)/2;                                /* 실제 폰트 기준 좌측 정렬 배치 */
+  txt(yr,ix,py+ph/2,lblS,G.newBest?'rgba(255,255,255,0.8)':'rgba(245,179,27,0.85)','left',F_SANS,'800');
+  txt(rt,ix+lbW+gapS,py+ph/2,rtS,'#fff','left',F_SANS,'900');
   if(G.newBest&&Math.sin(G.time*8)>0)
     txt('★ '+i18n('newbest')+' ★',SW/2,Y(0.263),SW*0.032,'#FFE07A','center',F_SANS,'900');
   else
@@ -3634,7 +3642,7 @@ function frame(tms){
 }
 function loop(tms){ frame(tms); requestAnimationFrame(loop); }
 
-window.DJ={G,A,T3,anow:()=>anow(),pnow:()=>pnow(),noShift:false,padTap:(p)=>padTap(p),
+window.DJ={G,A,T3,I18N,i18n,setLang,orderSpeech,anow:()=>anow(),pnow:()=>pnow(),noShift:false,padTap:(p)=>padTap(p),
   forceState:(s)=>{G.state=s;G.stateT=G.time;},step:()=>frame(performance.now())};
 
 resize(true);
