@@ -2919,7 +2919,7 @@ function drawEat(){
     const lbT=i18n('live');
     ctx.font=`900 ${R*0.24}px ${F_SANS}`;
     const lbW=R*0.52+ctx.measureText(lbT).width;
-    const lbX=fx-R*0.7-lbW, lbY=fy-R*1.5;           /* 얼굴 왼쪽 위 — 화면 밖으로 안 잘림 */
+    const lbX=Math.min(fx+R*0.55,SW-lbW-SW*0.02), lbY=fy-R*1.62;   /* 얼굴 오른쪽 위 — 면발 타이포와 분리, 화면 안쪽 클램프 */
     ctx.fillStyle='rgba(12,8,4,0.85)';
     rr(ctx,lbX,lbY,lbW,R*0.42,R*0.12); ctx.fill();
     ctx.fillStyle=Math.sin(G.time*6)>0?'#ff2e2e':'#801010';
