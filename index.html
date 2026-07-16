@@ -858,8 +858,7 @@ function applyJudge(j,note){
     if(G.combo>=25 && G.combo%25===0){             /* 25 단위 콤보 축포 */
       G.flash=0.5; G.flashCol=[255,205,60];
       G.shake=Math.max(G.shake,7);
-      spawnFX({kind:'artslam',art:'',text:`COMBO ${G.combo}!!`,t0:G.time});
-      feverFX();
+      feverFX();                                   /* 콤보 숫자는 상시 표시로 충분 — 중복 슬램 제거 */
       for(let i=0;i<18;i++) G.confetti.push({x:SW*0.5+rand(-SW*0.22,SW*0.22),y:SH*0.38,vx:rand(-90,90),vy:rand(-190,-70),rot:rand(0,6.3),vr:rand(-5,5),c:['#F2C14E','#ffe95e','#fff','#E8431F'][i%4],s:rand(4,9)});
     }
   }
@@ -2370,7 +2369,7 @@ function drawSpace(lv){
    ========================================================= */
 function regions(){
   return { hudY:SH*0.05, orderY:SH*0.112, labelY:SH*0.158,
-           railY:SH*0.238, judgeX:SW*0.28, comboY:SH*0.335,
+           railY:SH*0.238, judgeX:SW*0.28, comboY:SH*0.315,
            padY:SH*0.78, padH:SH*0.152 };
 }
 function pxPerBeat(){ return SW*(G.scroll||0.27); }
@@ -2470,10 +2469,11 @@ function drawGame(){
     const pop=1+0.35*Math.max(0,1-(G.time-G.comboT)*4);
     const col=tier===0?'#fff':tier===1?'#ffe95e':tier===2?'#ffb02e'
              :`hsl(${(G.time*(tier===4?420:240))%360},100%,65%)`;   /* 50+ 무지개 */
-    ctx.save(); ctx.translate(SW*0.5,R.comboY); ctx.scale(pop,pop);
+    ctx.save(); ctx.translate(SW*0.15,R.comboY); ctx.scale(pop,pop);   /* 좌측 레인 — 타이포·레일과 분리 */
     if(tier>=3) ctx.rotate(Math.sin(G.time*9)*0.03);
     if(tier>=2){ ctx.shadowColor=tier>=3?col:'#ff9d1e'; ctx.shadowBlur=SW*(0.02+tier*0.008); }
-    comicText(`COMBO ×${c2}`,0,0,SW*(0.058+tier*0.007),col);
+    comicText(`×${c2}`,0,0,SW*(0.062+tier*0.008),col);
+    comicText('COMBO',0,-SW*0.052,SW*0.026,col);
     ctx.restore();
     if(tier>=3){                                    /* 콤보 주위 별 오라 (50+) */
       const nS=2+tier*2;
@@ -2481,7 +2481,7 @@ function drawGame(){
         const a2=G.time*2.2+i*(6.283/nS);
         ctx.save(); ctx.globalAlpha=0.4+0.4*Math.sin(G.time*7+i*2);
         ctx.fillStyle=col;
-        starP(SW*0.5+Math.cos(a2)*SW*0.21,R.comboY+Math.sin(a2)*SW*0.045,SW*0.011+tier*1.5,G.time+i);
+        starP(SW*0.15+Math.cos(a2)*SW*0.1,R.comboY+Math.sin(a2)*SW*0.05,SW*0.009+tier*1.2,G.time+i);
         ctx.fill(); ctx.restore();
       }
     }
@@ -2594,23 +2594,23 @@ function drawGame(){
     }else if(f.kind==='banner'){
       const a=t<0.15?t/0.15:t>1.1?1-(t-1.1)/0.3:1;
       ctx.save(); ctx.globalAlpha=clamp(a,0,1);
-      ctx.fillStyle='rgba(15,9,3,0.85)';
-      rr(ctx,SW*0.24,SH*0.298,SW*0.52,SH*0.034,SH*0.017); ctx.fill();
-      txt(f.text,SW*0.5,SH*0.315,SH*0.0155,'#ffe95e','center',F_SANS,'900');
+      ctx.fillStyle='rgba(15,9,3,0.9)';
+      rr(ctx,SW*0.16,SH*0.705,SW*0.68,SH*0.036,SH*0.018); ctx.fill();   /* 하단 토스트 — 플레이 시야 밖 */
+      txt(f.text,SW*0.5,SH*0.7235,SH*0.016,'#ffe95e','center',F_SANS,'900');
       ctx.restore();
     }else if(f.kind==='drop'){
       if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
       const sc=0.85+0.35*easeOut(t/0.3);            /* 천천히 차오르는 팝인 */
       ctx.save(); ctx.globalAlpha=Math.min(1,t/0.12)*(1-easeIn((t-0.15)/1.0));
-      ctx.translate(SW*0.5,SH*0.313); ctx.scale(sc,sc);
+      ctx.translate(SW*0.52,SH*0.35); ctx.scale(sc,sc);   /* 레일 아래 — 노트 시야 확보 */
       const sv=clamp(f.serv||1,1,4);
       const pk=f.flavor==='jjaguri'?null:'p_'+SFX_KEY[f.flavor]+sv;
       /* 폴백 문구 = 실제 아트 파일의 문구와 인분별로 1:1 일치 → SVG 미로드(모바일 초반)에도 정확한 타이포 */
       const fbtxt = f.flavor==='jjaguri'
         ? (sv>=2?'JJAPAGURI ×2!!':'JJAPAGURI!!')
         : (FB_TYPO[SFX_KEY[f.flavor]]||[])[sv-1];
-      if(!(pk&&drawArt(pk,0,0,SW*0.42)) && fbtxt)
-        comicText(fbtxt,0,0,SW*0.052,'#F5E056');
+      if(!(pk&&drawArt(pk,0,0,SW*0.32)) && fbtxt)
+        comicText(fbtxt,0,0,SW*0.046,'#F5E056');
       ctx.restore();
     }else if(f.kind==='artslam'){
       if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
@@ -3015,10 +3015,12 @@ function drawEat(){
     ctx.fillStyle='#3A2412';
     ctx.beginPath(); ctx.arc(hdx,hdy,R*0.085,0,7); ctx.fill();
     /* wobbling slurp title */
-    ctx.save(); ctx.translate(SW*0.9,fy-R*0.1); ctx.rotate(-0.08+Math.sin(t*7)*0.04);   /* 입 바로 옆 — 먹는 소리는 얼굴에 딱 붙게 */
+    /* 먹는 소리 = 늘어난 면발 위쪽에 (냄비→입 아크의 중간 상단) */
+    const nmx=(potS.x+mo.x)/2, nmy=(potS.y+mo.y)/2;
+    ctx.save(); ctx.translate(nmx+R*0.15,nmy-R*1.15); ctx.rotate(-0.1+Math.sin(t*7)*0.04);
     const slk=['t_slurp','t_slurp2','t_chop'][G.bowls%3];   /* 그릇마다 다른 먹방 타이포 */
     const slsc={t_slurp:0.72,t_slurp2:1,t_chop:1}[slk];      /* 후루룹은 레터링이 캔버스를 꽉 채워서 보정 */
-    if(!drawArt(slk,0,0,SH*0.17*slsc)) txtO(i18n('slurp'),0,0,SW*0.065,'#fff','rgba(20,10,0,0.85)',SW*0.013);
+    if(!drawArt(slk,0,0,SH*0.15*slsc)) txtO(i18n('slurp'),0,0,SW*0.06,'#fff','rgba(20,10,0,0.85)',SW*0.012);
     ctx.restore();
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
