@@ -1055,6 +1055,7 @@ function updateFX(dt){
    3D — DJ Ramyun deck + cooking performance
    ========================================================= */
 const T3={ok:false,punch:0,burst:0,shake3:0,ledText:'',steam:[],bubbles:[]};
+let _tmpC=null,_tmpC2=null,_tmpV=null;   /* 매 프레임 재사용 — GC 압력 제거 */
 function mkTex(w,h,draw){ const c=document.createElement('canvas'); c.width=w; c.height=h;
   draw(c.getContext('2d'),w,h); const t=new THREE.CanvasTexture(c); t.anisotropy=4;
   if(THREE.SRGBColorSpace!==undefined) t.colorSpace=THREE.SRGBColorSpace;   /* 색 이중변환 방지 — 원색 그대로 */
@@ -1327,6 +1328,7 @@ function mkChibi(type){
 
 function init3D(){
   if(!window.THREE||window.__no3d) return;
+  T3.lowGPU=/iP(hone|od)|Android/i.test(navigator.userAgent);   /* 폰은 그림자 해상도 절반 */
   try{
     const r=new THREE.WebGLRenderer({canvas:glC,alpha:true,antialias:true,powerPreference:'high-performance'});
     r.setPixelRatio(DPR);
@@ -1354,7 +1356,7 @@ function init3D(){
     T3.scene.add(new THREE.HemisphereLight(0xffe9c4,0x1c1006,0.55));
     T3.scene.add(new THREE.AmbientLight(0xfff2dd,0.22));
     const key=new THREE.DirectionalLight(0xfff2e0,2.7); key.position.set(2.6,6.2,3.6);
-    key.castShadow=true; key.shadow.mapSize.set(1024,1024); key.shadow.radius=4;
+    key.castShadow=true; key.shadow.mapSize.set(T3.lowGPU?512:1024,T3.lowGPU?512:1024); key.shadow.radius=4;
     key.shadow.camera.left=-3; key.shadow.camera.right=3;
     key.shadow.camera.top=3; key.shadow.camera.bottom=-3;
     key.shadow.camera.near=1; key.shadow.camera.far=14;
@@ -1657,6 +1659,7 @@ function init3D(){
       T3.scene.add(sp); T3.steam.push(sp);
     }
     /* --- 3D characters: DJ behind the deck + the waiting line --- */
+    _tmpC=new THREE.Color(); _tmpC2=new THREE.Color(); _tmpV=new THREE.Vector3();
     T3.chibiCache={};
     T3.qSlots=[...Array(6)].map(()=>({type:null,grp:null}));
 
@@ -1709,11 +1712,12 @@ function update3D(dt){
   T3.broth.scale.setScalar(bsc);
   T3.brothMat.roughness=dryN?0.34:0.07;
   T3.brothMat.clearcoat=dryN?0.25:1;
-  T3.brothMat.color.lerp(new THREE.Color(fb.broth),0.05);
-  T3.brothMat.emissive.lerp(new THREE.Color(fb.broth),0.05);   /* 국물색 그대로 발광 — 쨍한 라면색 */
+  _tmpC.setHex(fb.broth);
+  T3.brothMat.color.lerp(_tmpC,0.05);
+  T3.brothMat.emissive.lerp(_tmpC,0.05);   /* 국물색 그대로 발광 — 쨍한 라면색 */
   T3.brothMat.emissiveIntensity=(fb.key==='jjapa'?0.16:0.5)+T3.punch*1.3+(G.fever?0.3+0.18*Math.sin(G.time*9):0);
   /* noodles pick up the sauce — dark for jjapa, red-tinged for buldak */
-  T3.noodleMat.color.lerp(new THREE.Color(fb.key==='jjapa'?0x6E4419:fb.key==='jjaguri'?0xA5702F:fb.key==='buldak'?0xE88A38:0xF6D468),0.05);
+  T3.noodleMat.color.lerp(_tmpC2.setHex(fb.key==='jjapa'?0x6E4419:fb.key==='jjaguri'?0xA5702F:fb.key==='buldak'?0xE88A38:0xF6D468),0.05);
   T3.noodleMat.emissive.copy(T3.noodleMat.color).multiplyScalar(0.22);   /* 면발도 또렷하게 */
   /* induction heat — the LP visibly glows under the pot */
   const heat=(G.state==='game'?1:0.2)*(0.55+Math.min(0.45,G.combo*0.02));
@@ -2878,7 +2882,7 @@ function drawEat(){
   /* 3D 냄비 림의 실제 화면 좌표 (냄비 크기 따라 정확히 추적) */
   let potS={x:SW*0.55,y:SH*0.52};
   if(T3.ok&&T3.pot&&window.THREE){
-    const v=new THREE.Vector3(0.08,0.5,0.12);   /* 냄비 입구 중앙 */
+    const v=_tmpV.set(0.08,0.5,0.12);   /* 냄비 입구 중앙 */
     T3.pot.localToWorld(v); v.project(T3.camera);
     potS={x:(v.x*0.5+0.5)*VW-SX, y:(1-(v.y*0.5+0.5))*VH};
   }
@@ -3585,9 +3589,19 @@ window.addEventListener('keydown',e=>{
    MAIN LOOP
    ========================================================= */
 let lastT=performance.now();
+let _slowN=0, _qLevel=0;
+function autoQuality(raw){                          /* 느린 기기 자동 보호 — 끊김 방지 */
+  if(G.state!=='game'||raw>0.1) return;             /* 0.1s↑는 스톨·스로틀이지 렌더 부하가 아님 — 오판 방지 */
+  if(raw>0.026){ if(++_slowN>45){ _slowN=0; _qLevel++;
+      if(_qLevel===1&&T3.ok){ T3.renderer.shadowMap.enabled=false; T3.renderer.shadowMap.needsUpdate=true; }
+      else if(_qLevel===2&&DPR>1.25){ DPR=1.25; resize(true); }
+    } }
+  else if(_slowN>0) _slowN--;
+}
 function frame(tms){
   if(VW!==window.innerWidth||VH!==window.innerHeight) resize();   /* 리사이즈 이벤트 유실 자가복구 — 2겹 잔상 방지 */
   const raw=(tms-lastT)/1000;
+  autoQuality(raw);
   // render stalled (hidden tab / panel switch) → shift the timeline so the game pauses instead of failing
   if(G.state==='game' && raw>0.4 && !(window.DJ&&window.DJ.noShift)){
     for(const n of G.notes) n.time+=raw;
