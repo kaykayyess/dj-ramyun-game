@@ -58,7 +58,7 @@ const pickCust = ()=>{
   const r=Math.random();
   if(r<0.08) return 'kiddo';                       /* 초딩 8% */
   if(r<0.15) return 'granpa';                      /* 힙한 할배 7% */
-  const gs=CUST_GROUPS[Math.random()<0.6?'f':'m'];
+  const gs=CUST_GROUPS[Math.random()<0.706?'f':'m'];   /* 성인 70.6% 여성 → 전체(초딩·할배 포함) 기준 여 60% */
   const grp=gs[irand(0,2)]; return grp[irand(0,grp.length-1)]; };
 const CUST_SKIN = {kiddo:'#EDBE93',granpa:'#C99A6B',trav:'#8A5A3B',carti:'#6E4630',jay:'#7A4E33',ye:'#7E5236',bey:'#B07B4E',phril:'#8A5A3B',snoop:'#6E4630',nicki:'#9A6A44',nigo:'#F2C9A0',lisa:'#F5D3AE',psy:'#EDC49C',em:'#F7E3D4',billie:'#F6E2DA',posty:'#F2D8C4',tay:'#F8E6D8'};
 /* 손님 대사는 I18N 사전(cq_*)으로 이동 */
