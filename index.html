@@ -99,7 +99,7 @@ const I18N={
   tut_tap:'원판이 ◯에 닿는 순간 {0} 탭!',
   tut_practice:'연습 손님 — 하트 안 닳아요!',
   tut_retry:'괜찮아요! 다시 한 번!',
-  live_bonus:'🎥 방송 대박!! 점수 ×2',
+  chug:'쓰읍—!! 원샷 😤', live_bonus:'🎥 방송 대박!! 점수 ×2',
   hype1:'🍜 맛집 소문이 돌기 시작했다...', hype2:'웅성웅성... 소문 듣고 손님들이 몰려온다!!',
   hype3:'🔥 원판 맛집 등극!! 줄이 끝이 없다!!', murmur:'웅성웅성...',
   hq1:'의사가 라면 끊으랬잖아', hq2:'그 의사 저 앞에 서 있어',
@@ -147,7 +147,7 @@ const I18N={
   tut_tap:'Tap {0} when the disc hits the ◯!',
   tut_practice:'Practice run — no heart loss!',
   tut_retry:'No worries — one more try!',
-  live_bonus:'🎥 IT AIRED!! SCORE ×2',
+  chug:'SLUUURP!! one gulp 😤', live_bonus:'🎥 IT AIRED!! SCORE ×2',
   hype1:'🍜 Word about this spot is spreading...', hype2:'The hype is real — customers flooding in!!',
   hype3:'🔥 CERTIFIED HOT SPOT!! The line never ends!!', murmur:'chatter chatter...',
   hq1:'Doc said quit ramyun??', hq2:'That doc? 3rd in line',
@@ -190,7 +190,7 @@ const I18N={
   fl_ramyun:'ラーメン', fl_buldak:'ブルダック', fl_jjapa:'チャパゲティ', fl_neogury:'ノグリ',
   fl_jjaguri:'チャパグリ', fever:'🔥 FEVER ×2 — スコア2倍! 🔥', open:'営業スタート!!', first_bowl:'🍜 最初の一杯完成!バズらせに行くぞ~!!',
   tut_play:'▶ PLAYでサーブ!', tut_tap:'ディスクが◯に重なったら{0}をタップ!', tut_practice:'練習だよ — ハート減らない!', tut_retry:'ドンマイ!もう一回!',
-  live_bonus:'🎥 神回!!スコア×2',
+  chug:'ズズッ!!一気 😤', live_bonus:'🎥 神回!!スコア×2',
   hype1:'🍜 うわさが広まりはじめた…', hype2:'ざわざわ…行列ができてきた!!',
   hype3:'🔥 伝説の名店に認定!!行列が止まらない!!', murmur:'ざわざわ…',
   hq1:'医者にラーメン止められたろ', hq2:'その医者、前に並んでる',
@@ -220,7 +220,7 @@ const I18N={
   fl_ramyun:'泡麵', fl_buldak:'火雞麵', fl_jjapa:'炸醬麵', fl_neogury:'浣熊麵',
   fl_jjaguri:'炸醬浣熊麵', fever:'🔥 FEVER ×2 — 分數翻倍!🔥', open:'正式開張!!', first_bowl:'🍜 第一碗完成!小店要爆紅啦~!!',
   tut_play:'▶ 按 PLAY 上菜!', tut_tap:'圓盤碰到◯的瞬間點{0}!', tut_practice:'練習局 — 不扣愛心!', tut_retry:'沒關係!再一次!',
-  live_bonus:'🎥 直播爆紅!!分數×2',
+  chug:'咻!!一口乾 😤', live_bonus:'🎥 直播爆紅!!分數×2',
   hype1:'🍜 好味道的傳聞開始擴散…', hype2:'議論紛紛…客人聞香而來!!',
   hype3:'🔥 正宗名店認證!!排隊排到看不到尾!!', murmur:'嘰嘰喳喳…',
   hq1:'醫生不是叫你戒泡麵?', hq2:'那醫生就排在前面',
@@ -250,7 +250,7 @@ const I18N={
   fl_ramyun:'拉面', fl_buldak:'火鸡面', fl_jjapa:'炸酱面', fl_neogury:'浣熊面',
   fl_jjaguri:'浣熊炸酱面', fever:'🔥 FEVER ×2 — 分数翻倍!🔥', open:'开张营业!!', first_bowl:'🍜 第一碗出锅!这店要火了~!!',
   tut_play:'▶ 按 PLAY 上菜!', tut_tap:'圆盘碰到◯的瞬间点{0}!', tut_practice:'练习局 — 不掉爱心!', tut_retry:'没事!再来一次!',
-  live_bonus:'🎥 直播爆火!!分数×2',
+  chug:'咻!!一口闷 😤', live_bonus:'🎥 直播爆火!!分数×2',
   hype1:'🍜 这家店的口碑开始传开了…', hype2:'窃窃私语…客人闻讯赶来!!',
   hype3:'🔥 火爆名店认证!!队伍根本排不完!!', murmur:'叽叽喳喳…',
   hq1:'医生不是让你戒面?', hq2:'那医生就排前面',
@@ -823,7 +823,7 @@ function setState(s){ G.state=s; G.stateT=G.time; if(s!=='game'&&A.ctx) bgmStop(
 function startGame(){
   G.score=0; G.lives=3; G.combo=0; G.maxCombo=0; G.bowls=0; G.orderCount=0; G.perfectOrders=0;
   G.notes=[]; G.noteIdx=0; G.bpm=96; G.fever=false; G.dying=0; G.newBest=false;
-  G.fx.length=0; G.toasts.length=0; G.confetti.length=0; G.curOrderNo=0; G.curSection=''; G.eat=null; G.drop=0; G.dropT0=0;
+  G.fx.length=0; G.toasts.length=0; G.confetti.length=0; G.curOrderNo=0; G.curSection=''; G.eat=null; G.eatOut=null; G.drop=0; G.dropT0=0;
   G.tut=!window.__tutDone;   /* 접속마다 첫 판은 연습 손님 — 같은 세션 재도전은 생략 */
   G.space=0;                 /* 우주는 매 판 다시 열어야 한다 */
   G.hypeLv=0;                /* 맛집 명성도 매 판 다시 쌓는다 */
@@ -915,6 +915,16 @@ function domOf(order){
   for(const s of (order.sections||[])) if(order.counts[s.key]>n){ n=order.counts[s.key]; bf=s.key; }
   return bf;
 }
+function chugOut(){                                /* 바쁠 때: 앞 손님이 남은 라면을 원샷하고 퇴장 */
+  if(G.eat && !G.eat._served && (G.time-G.eat.t0)>0.12){
+    G.eatOut={customer:G.eat.customer,bonus:G.eat.bonus,flavor:G.eat.flavor,
+              spice:G.eat.spice,live:G.eat.live,t0:G.time};
+    if(T3.ok&&G.eat._nd){ G.eat._nd.forEach(i=>{T3.noodleTubes[i].userData.tgt=0.001;});
+      (G.eat._tp||[]).forEach(k=>{T3.tops[k].userData.tgt=0.001;}); }
+    playBuf('slurp'+(1+((A.slurpIdx=((A.slurpIdx||0)+1))%3)),0.5,1.35,{group:'slurp'});
+  }
+  G.eat=null;
+}
 function finishOrder(order){
   const ratio=order.hit/order.total;
   /* 냄비는 즉시 안 비운다 — 손님이 먹는 동안 3D 면이 실제로 줄어든다 (drawEat가 처리) */
@@ -923,6 +933,7 @@ function finishOrder(order){
       G.tut=false; window.__tutDone=true;
       G.bowls++; G.score+=500;
       slurpFX();
+      chugOut();
       G.eat={t0:G.time,customer:order.customer,bonus:500,perfect:true,heart:false,flavor:'ramyun',spice:0,serv:2};
       for(let i=0;i<18;i++) G.confetti.push({x:rand(0,SW),y:rand(-SH*0.1,0),vx:rand(-30,30),vy:rand(60,160),rot:rand(0,6.3),vr:rand(-4,4),c:FLAVORS[SEQ[i%4]].color,s:rand(4,9)});
       spawnFX({kind:'banner',text:i18n('first_bowl'),t0:G.time});
@@ -948,6 +959,7 @@ function finishOrder(order){
     if(gotHeart) G.lives=Math.min(3,G.lives+1);
     if(!order.counts.jjaguri) slurpFX();          /* 드랍이 대신 울린다 */
     if(gotHeart) heartFX();
+    chugOut();
     G.eat={t0:G.time,customer:order.customer,bonus:b,perfect:true,heart:gotHeart,flavor:domOf(order),spice:domOf(order)==='buldak'?(order.counts.buldak||1):0,serv:order.counts[domOf(order)]||1,spd:1+clamp((G.curOrderNo-8)/18,0,1)*1.3,live:order.live};
     for(let i=0;i<22;i++) G.confetti.push({x:rand(0,SW),y:rand(-SH*0.1,0),vx:rand(-30,30),vy:rand(60,160),rot:rand(0,6.3),vr:rand(-4,4),c:FLAVORS[SEQ[i%4]].color,s:rand(4,9)});
     /* 짜파구리 퍼펙트 = THE DROP!! turntable spins up, everything ×3 */
@@ -964,6 +976,7 @@ function finishOrder(order){
     const b=Math.round(400*diffMult());
     G.score+=b; G.bowls++;
     slurpFX();
+    chugOut();
     G.eat={t0:G.time,customer:order.customer,bonus:b,perfect:false,heart:false,flavor:domOf(order),spice:domOf(order)==='buldak'?(order.counts.buldak||1):0,serv:order.counts[domOf(order)]||1,spd:1+clamp((G.curOrderNo-8)/18,0,1)*1.3,live:order.live};
   }else{
     if(T3.ok) T3.serveClear();                     /* 손님이 안 먹고 감 — 그릇 회수 */
@@ -2574,6 +2587,7 @@ function drawGame(){
     } }
   /* ---- toasts + slurp vignette (the queue itself is 3D now) ---- */
   drawToasts();
+  drawEatOut();
   drawEat();
 
   /* ---- FX ---- */
@@ -2794,6 +2808,30 @@ function drawMiniBowl(x,y,w,fk,t,tilt){
     ctx.moveTo(nx-w*0.07,-h*0.28);
     ctx.bezierCurveTo(nx+wob,-h*0.38,nx-wob,-h*0.2,nx+w*0.07,-h*0.32);
     ctx.stroke();
+  }
+  ctx.restore();
+}
+/* 원샷 흡입 퇴장 — 주문이 몰아칠수록 자주 나오는 개그 */
+function drawEatOut(){
+  if(!G.eatOut) return;
+  const e=G.eatOut, t=G.time-e.t0, D2=0.8;
+  if(t>D2){ G.eatOut=null; return; }
+  const p=clamp(t/D2,0,1);
+  const R=SW*0.062, fx=SW*0.78+p*SW*0.16, fy=SH*0.55-p*SH*0.02;   /* 오른쪽으로 빠지며 페이드 (화면 안에서 시작) */
+  ctx.save(); ctx.globalAlpha=1-easeIn(Math.max(0,(p-0.55)/0.45));
+  const gulp=p<0.4?1+Math.sin(p/0.4*Math.PI)*0.16:1;              /* 꿀꺽 부풀기 */
+  drawCust(fx,fy,R*gulp,e.customer,G.time,p<0.45?'slurp':'happy');
+  if(p<0.5){                                                      /* 진공 흡입 라인 */
+    ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=R*0.06; ctx.lineCap='round';
+    for(let i=0;i<4;i++){ const a=-2.5+i*0.42, d=R*(1.5-p*1.6);
+      ctx.beginPath();
+      ctx.moveTo(fx+Math.cos(a)*d*1.5,fy+Math.sin(a)*d*1.5+R*0.4);
+      ctx.lineTo(fx+Math.cos(a)*d,fy+Math.sin(a)*d+R*0.4); ctx.stroke(); }
+    txtO(i18n('chug'),Math.min(fx,SW*0.82),fy-R*1.5,SW*0.03,'#ffe95e','#7a2800',SW*0.007);
+  }else{
+    ctx.font=`${R*0.9}px ${F_SANS}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('👍',fx-R*1.25,fy+R*0.1);                        /* 원샷하고 엄지척 */
+    txt('+'+e.bonus,fx,fy-R*1.4,SW*0.024,'#fff','center',F_ARCADE,'400');
   }
   ctx.restore();
 }
