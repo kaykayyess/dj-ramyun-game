@@ -2368,8 +2368,8 @@ function drawSpace(lv){
    UI RENDER — game
    ========================================================= */
 function regions(){
-  return { hudY:SH*0.055, orderY:SH*0.124, labelY:SH*0.175,
-           railY:SH*0.265, judgeX:SW*0.28, comboY:SH*0.368,
+  return { hudY:SH*0.05, orderY:SH*0.112, labelY:SH*0.158,
+           railY:SH*0.238, judgeX:SW*0.28, comboY:SH*0.335,
            padY:SH*0.78, padH:SH*0.152 };
 }
 function pxPerBeat(){ return SW*(G.scroll||0.27); }
@@ -2805,7 +2805,7 @@ function drawEat(){
   const happy=t>=SLURP, ht=t-SLURP;
   const bob=happy? -Math.abs(Math.sin(ht*9))*SH*0.014*Math.max(0,1-ht*1.1)
                  : Math.sin(t*9)*SH*0.004;
-  const R=SW*0.095, fx=SW*0.79, fy=SH*0.365+bob;     /* 얼굴 확대 — 3D 냄비에서 바로 먹는다 */
+  const R=SW*0.095, fx=SW*0.79, fy=SH*0.405+bob;     /* 얼굴은 레일 아래로 — UI 안 가림 */
   const mo={x:fx-R*0.34,y:fy+R*0.5};                 /* mouth anchor */
 
   /* 3D 냄비 림의 실제 화면 좌표 (냄비 크기 따라 정확히 추적) */
@@ -3003,10 +3003,10 @@ function drawEat(){
     ctx.fillStyle='#3A2412';
     ctx.beginPath(); ctx.arc(hdx,hdy,R*0.085,0,7); ctx.fill();
     /* wobbling slurp title */
-    ctx.save(); ctx.translate(SW*0.86,fy-R*1.75); ctx.rotate(-0.06+Math.sin(t*7)*0.04);   /* 커진 얼굴 위 오른쪽 */
+    ctx.save(); ctx.translate(SW*0.85,fy+R*0.62); ctx.rotate(-0.08+Math.sin(t*7)*0.04);   /* 얼굴 옆아래 — 상단 레일 절대 안 가림 */
     const slk=['t_slurp','t_slurp2','t_chop'][G.bowls%3];   /* 그릇마다 다른 먹방 타이포 */
     const slsc={t_slurp:0.72,t_slurp2:1,t_chop:1}[slk];      /* 후루룹은 레터링이 캔버스를 꽉 채워서 보정 */
-    if(!drawArt(slk,0,0,SH*0.26*slsc)) txtO(i18n('slurp'),0,0,SW*0.09,'#fff','rgba(20,10,0,0.85)',SW*0.018);
+    if(!drawArt(slk,0,0,SH*0.22*slsc)) txtO(i18n('slurp'),0,0,SW*0.08,'#fff','rgba(20,10,0,0.85)',SW*0.016);
     ctx.restore();
   }else{
     /* ---- quick reaction pop, then out of the way ---- */
