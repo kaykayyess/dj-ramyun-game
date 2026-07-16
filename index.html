@@ -16,7 +16,7 @@
 html,body{margin:0;padding:0;background:#0b0906;height:100%;overflow:hidden;
   -webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none;
   -webkit-tap-highlight-color:transparent}
-canvas{display:block;position:fixed;inset:0}
+canvas{display:block;position:fixed;top:0;left:0}
 #bg{z-index:0}#gl{z-index:1}#ui{z-index:2}
 </style>
 </head>
@@ -292,13 +292,19 @@ let VW=0,VH=0,SW=0,SH=0,SX=0,DPR=1;
 function resize(){
   DPR = Math.min(window.devicePixelRatio||1, 2);
   VW = window.innerWidth; VH = window.innerHeight;
-  for (const c of [bgC, uiC]){ c.width=VW*DPR; c.height=VH*DPR; c.style.width=VW+'px'; c.style.height=VH+'px'; }
+  for (const c of [bgC, uiC]){ c.width=VW*DPR; c.height=VH*DPR;
+    c.style.left='0px'; c.style.top='0px'; c.style.width=VW+'px'; c.style.height=VH+'px'; }
   SH = VH; SW = Math.min(VW, Math.max(320, SH*0.62), 560); SX=(VW-SW)/2;
   /* keep the 3D canvas inside the game column so it never bleeds into the letterbox */
-  glC.style.left=SX+'px'; glC.style.right='auto'; glC.style.width=SW+'px'; glC.style.height=VH+'px';
+  glC.style.left=SX+'px'; glC.style.top='0px'; glC.style.right='auto'; glC.style.width=SW+'px'; glC.style.height=VH+'px';
   resize3D();
 }
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', ()=>{ resize(); setTimeout(resize,300); });
+if(window.visualViewport){                          /* 모바일 URL바·핀치·인앱브라우저 뷰포트 변화 */
+  window.visualViewport.addEventListener('resize', resize);
+  window.visualViewport.addEventListener('scroll', resize);
+}
 
 let dotPat=null;
 (function(){
@@ -3199,7 +3205,7 @@ function drawAttract(){
   ctx.restore();
 }
 
-const BUILD='v0716d';
+const BUILD='v0716e';
 /* 플레이 타이포 폴백 — 각 인분 아트 파일의 실제 문구와 1:1 (SVG 미로드 시에도 정확) */
 const FB_TYPO={
   ram:["LET'S PLAY","IN THE MIX!","BOSS LEVEL","ARE YOU KIDDING ME?!"],
