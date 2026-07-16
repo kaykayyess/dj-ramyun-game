@@ -17,6 +17,7 @@ html,body{margin:0;padding:0;background:#0b0906;height:100%;overflow:hidden;
   -webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none;
   -webkit-tap-highlight-color:transparent}
 canvas{display:block;position:fixed;top:0;left:0}
+#bg{background:#0b0906}
 #bg{z-index:0}#gl{z-index:1}#ui{z-index:2}
 </style>
 </head>
@@ -289,9 +290,11 @@ const bgC = document.getElementById('bg'), bgX = bgC.getContext('2d');
 const uiC = document.getElementById('ui'); const ctx = uiC.getContext('2d');
 const glC = document.getElementById('gl');
 let VW=0,VH=0,SW=0,SH=0,SX=0,DPR=1;
-function resize(){
-  DPR = Math.min(window.devicePixelRatio||1, 2);
-  VW = window.innerWidth; VH = window.innerHeight;
+function resize(force){
+  const ndpr=Math.min(window.devicePixelRatio||1,2);
+  const nw=window.innerWidth, nh=window.innerHeight;
+  if(!force && nw===VW && nh===VH && ndpr===DPR) return;   /* 변화 없으면 아무것도 안 함 — 반복 클리어 방지 */
+  DPR = ndpr; VW = nw; VH = nh;
   for (const c of [bgC, uiC]){ c.width=VW*DPR; c.height=VH*DPR;
     c.style.left='0px'; c.style.top='0px'; c.style.width=VW+'px'; c.style.height=VH+'px'; }
   SH = VH; SW = Math.min(VW, Math.max(320, SH*0.62), 560); SX=(VW-SW)/2;
@@ -299,12 +302,10 @@ function resize(){
   glC.style.left=SX+'px'; glC.style.top='0px'; glC.style.right='auto'; glC.style.width=SW+'px'; glC.style.height=VH+'px';
   resize3D();
 }
-window.addEventListener('resize', resize);
-window.addEventListener('orientationchange', ()=>{ resize(); setTimeout(resize,300); });
-if(window.visualViewport){                          /* 모바일 URL바·핀치·인앱브라우저 뷰포트 변화 */
-  window.visualViewport.addEventListener('resize', resize);
-  window.visualViewport.addEventListener('scroll', resize);
-}
+window.addEventListener('resize', ()=>resize());
+window.addEventListener('orientationchange', ()=>{ resize(true); setTimeout(()=>resize(true),300); });
+if(window.visualViewport)                           /* 모바일 URL바·핀치 뷰포트 변화 */
+  window.visualViewport.addEventListener('resize', ()=>resize());
 
 let dotPat=null;
 (function(){
@@ -3220,7 +3221,7 @@ function drawAttract(){
   ctx.restore();
 }
 
-const BUILD='v0716e';
+const BUILD='v0716f';
 /* 플레이 타이포 폴백 — 각 인분 아트 파일의 실제 문구와 1:1 (SVG 미로드 시에도 정확) */
 const FB_TYPO={
   ram:["LET'S PLAY","IN THE MIX!","BOSS LEVEL","ARE YOU KIDDING ME?!"],
@@ -3563,7 +3564,7 @@ function loop(tms){ frame(tms); requestAnimationFrame(loop); }
 window.DJ={G,A,T3,anow:()=>anow(),pnow:()=>pnow(),noShift:false,padTap:(p)=>padTap(p),
   forceState:(s)=>{G.state=s;G.stateT=G.time;},step:()=>frame(performance.now())};
 
-resize();
+resize(true);
 lbSync();
 initAudio();   /* suspended 상태로 미리 생성 — 디코딩은 가능, 소리는 첫 터치에 resume */
 init3D();
