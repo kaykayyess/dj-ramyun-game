@@ -852,11 +852,18 @@ function padTap(pad){
   const a=Math.abs(dt);
   applyJudge(a<=w.p?'perfect':a<=w.g?'good':'bad', note);
 }
+function comboBreak(){                              /* 콤보가 끊기는 순간을 눈에 보이게 */
+  if(G.combo>=3){
+    spawnFX({kind:'combobreak',n:G.combo,t0:G.time});
+    if(A.ctx) tone({t:anow(),type:'sawtooth',f0:280,f1:80,dur:0.24,v:0.09,filter:'lowpass',ff:1100});
+  }
+  G.combo=0;
+}
 function applyJudge(j,note){
   const mult=j==='perfect'?1:j==='good'?0.7:0.3;
   const pts=Math.round(100*mult*diffMult()*(1+G.combo/100))*(G.fever?2:1)*(G.time<G.drop?3:1);
   G.score+=pts;
-  if(j==='bad') G.combo=0;
+  if(j==='bad') comboBreak();
   else{
     G.combo++; G.comboT=G.time;
     G.maxCombo=Math.max(G.maxCombo,G.combo);
@@ -899,7 +906,7 @@ function applyJudge(j,note){
 }
 function markMiss(note,reason){
   note.judged='miss'; note.order.miss++;
-  G.combo=0; G.fever=false;
+  comboBreak(); G.fever=false;
   if(!note.order.tut) G.lives--;                   /* 연습 주문은 하트가 안 닳는다 */
   G.dmg=1; G.shake=Math.max(G.shake,8); T3.shake3=1;
   scratchFX();
@@ -2649,6 +2656,20 @@ function drawGame(){
       ctx.translate(SW/2,SH*0.425); ctx.scale(sc2,sc2); ctx.rotate(Math.sin(t*9)*0.03);
       if(!drawArt(f.art,0,0,SW*0.5)&&f.text)
         comicText(f.text,0,0,SW*0.058,'#F5E056');           /* 파일 없으면 동일 무드로 생성 */
+      ctx.restore();
+    }else if(f.kind==='combobreak'){
+      const S=SW*0.062, cx=SW*0.15, cy=R.comboY;
+      const q=Math.max(0,(t-0.09)/0.5);               /* 0.09초는 온전히 보여주고 → 갈라짐 */
+      ctx.save(); ctx.globalAlpha=Math.max(0,1-q*1.1);
+      for(const half of[-1,1]){                       /* -1 윗조각(COMBO 라벨 포함) · 1 아랫조각 */
+        ctx.save();
+        ctx.translate(cx+half*q*SW*0.03, cy+(half<0?-q*SH*0.018:q*q*SH*0.065));
+        ctx.rotate(half*q*0.38);
+        ctx.beginPath(); ctx.rect(-SW*0.26,half<0?-S*1.7:0,SW*0.52,half<0?S*1.7:S*1.1); ctx.clip();
+        comicText(`×${f.n}`,0,0,S,'#C4564A','#2a0e0e');
+        comicText('COMBO',0,-SW*0.052,SW*0.026,'#C4564A','#2a0e0e');
+        ctx.restore();
+      }
       ctx.restore();
     }else if(f.kind==='heartbreak'){
       const a=1-t/0.8;
