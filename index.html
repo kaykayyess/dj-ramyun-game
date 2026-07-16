@@ -2572,12 +2572,13 @@ function drawGame(){
         ctx.font=`${SW*0.028}px ${F_SANS}`;
         ctx.fillText('❗',SW*0.085,SH*0.6-((G.time*0.5+0.25)%1)*SH*0.02); }
       ctx.restore();
-      /* 몰려든 손님이 한 마디씩 — 맛집 인증 드립 */
-      { const cyc=12, tq=G.time%cyc, idx=(G.time/cyc)|0;   /* 12초에 한 번: Q→A 티키타카 후 한참 조용 */
+      /* 몰려든 손님이 한 마디씩 — 맛집 인증 드립 (주문 말풍선과 합쳐 화면 최대 2개) */
+      const bubBudget=2-Math.min(2,G.toasts.length);
+      if(bubBudget>0){ const cyc=12, tq=G.time%cyc, idx=(G.time/cyc)|0;   /* 12초에 한 번: Q→A 티키타카 후 한참 조용 */
         const pairId=((idx*3)%8);                            /* 8쌍 전부 돌기 전엔 같은 드립 반복 없음 */
-        const drawBub=(msg,odd,t0)=>{
-          const tt2=tq-t0; if(tt2<0||tt2>2.6) return;
-          const pop=easeOut(Math.min(1,tt2/0.3))*(1-easeIn(Math.max(0,(tt2-2.0)/0.55)));
+        const drawBub=(msg,odd,t0,dur)=>{
+          const tt2=tq-t0; if(tt2<0||tt2>dur) return;
+          const pop=easeOut(Math.min(1,tt2/0.3))*(1-easeIn(Math.max(0,(tt2-(dur-0.6))/0.55)));
           const h=SH*0.032;
           let fs=h*0.52; ctx.save(); ctx.globalAlpha=clamp(pop,0,1);
           ctx.font=`800 ${fs}px ${F_SANS}`;
@@ -2593,8 +2594,9 @@ function drawGame(){
           txt(msg,bx+w/2,by+h/2+0.5,fs,'#3A2A1E','center',F_SANS,'800');
           ctx.restore();
         };
-        drawBub(i18n('hq'+(1+pairId*2)),0,0);               /* 질문 */
-        drawBub(i18n('hq'+(2+pairId*2)),1,1.7);             /* 1.7초 뒤 받아치기 */
+        /* 예산이 1칸뿐이면 질문을 먼저 접고 대답을 띄워 동시에 2개가 안 되게 */
+        drawBub(i18n('hq'+(1+pairId*2)),0,0,bubBudget>=2?2.6:1.7);   /* 질문 */
+        drawBub(i18n('hq'+(2+pairId*2)),1,1.7,2.6);                  /* 1.7초 뒤 받아치기 */
       }
     } }
   /* ---- toasts + slurp vignette (the queue itself is 3D now) ---- */
