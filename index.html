@@ -855,9 +855,8 @@ function applyJudge(j,note){
       played=playBuf('guri'+serv,vol*0.61,1,{group:'play',cut:'fast',skipSilence:true})
            ||playBuf('jja'+serv,vol*0.58,1,{group:'play',cut:'fast',skipSilence:true});
     else played=playBuf(SFX_KEY[note.flavor]+serv,vol*0.58,1,{group:'play',skipSilence:true});
-    const oLat=(A.ctx&&(A.ctx.outputLatency||A.ctx.baseLatency))||0;   /* 에어팟/블루투스 지연 보정 */
-    if(played) spawnFX({kind:'drop',flavor:note.flavor,serv,t0:G.time+0.18+Math.min(0.45,oLat)});
-    else dropFX(note.flavor,vol);
+    if(!played) dropFX(note.flavor,vol);                                 /* 샘플 미디코딩 시 신스 폴백 */
+    spawnFX({kind:'drop',flavor:note.flavor,serv,t0:G.time+0.1});        /* 타이포는 사운드 성공 여부와 무관하게 항상 */
     G.flash=0.45; G.flashCol=hex2rgb(FLAVORS[note.flavor].color);
     G.shake=Math.max(G.shake,j==='perfect'?9:5);
     T3.punch=1; T3.burst=1;
@@ -2512,11 +2511,14 @@ function drawGame(){
       const sc=0.85+0.35*easeOut(t/0.3);            /* 천천히 차오르는 팝인 */
       ctx.save(); ctx.globalAlpha=Math.min(1,t/0.12)*(1-easeIn((t-0.15)/1.0));
       ctx.translate(SW*0.5,SH*0.313); ctx.scale(sc,sc);
-      const pk=f.flavor==='jjaguri'?null:'p_'+SFX_KEY[f.flavor]+(f.serv||1);
-      const FB={buldak:'ON FIRE!!',jjapa:'IN THE SAUCE',
-                neogury:'SHOTS!!',jjaguri:(f.serv||1)>=2?'JJAPAGURI ×2!!':'JJAPAGURI!!'};   /* 다른 아트 문구와 안 겹치는 고유 문구 */
-      if(!(pk&&drawArt(pk,0,0,SW*0.42)) && FB[f.flavor])
-        comicText(FB[f.flavor],0,0,SW*0.052,'#F5E056');
+      const sv=clamp(f.serv||1,1,4);
+      const pk=f.flavor==='jjaguri'?null:'p_'+SFX_KEY[f.flavor]+sv;
+      /* 폴백 문구 = 실제 아트 파일의 문구와 인분별로 1:1 일치 → SVG 미로드(모바일 초반)에도 정확한 타이포 */
+      const fbtxt = f.flavor==='jjaguri'
+        ? (sv>=2?'JJAPAGURI ×2!!':'JJAPAGURI!!')
+        : (FB_TYPO[SFX_KEY[f.flavor]]||[])[sv-1];
+      if(!(pk&&drawArt(pk,0,0,SW*0.42)) && fbtxt)
+        comicText(fbtxt,0,0,SW*0.052,'#F5E056');
       ctx.restore();
     }else if(f.kind==='artslam'){
       if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
@@ -3070,7 +3072,14 @@ function drawAttract(){
   ctx.restore();
 }
 
-const BUILD='v0716c';
+const BUILD='v0716d';
+/* 플레이 타이포 폴백 — 각 인분 아트 파일의 실제 문구와 1:1 (SVG 미로드 시에도 정확) */
+const FB_TYPO={
+  ram:["LET'S PLAY","IN THE MIX!","BOSS LEVEL","ARE YOU KIDDING ME?!"],
+  bul:["ON FIRE!!","DOUBLE FIRE!","YOU CRAZY!","THAT'S ILLEGAL"],
+  jja:["IN THE SAUCE","DOUBLE DRIP","YOU COOKIN' HITS!","THAT'S A BANGER"],
+  neo:["LET'S GO!","IN THE MIX!","TRIPLE TAILS, BABY!","THAT'S A MONSTER"]
+};
 /* ---------- 글로벌 실시간 랭킹 (Firebase Firestore REST) ----------
    웹·iOS·Android 앱이 전부 같은 코드라 하나의 리더보드 공유.
    활성화: FIREBASE에 projectId/apiKey 채우면 끝 — 비어 있으면 로컬 차트로 동작. */
