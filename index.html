@@ -979,7 +979,7 @@ function update(dt){
   }
   if(G.dying && G.time-G.dying>1.15){
     if(G.score>G.best){ G.best=G.score; localStorage.setItem('djr_best',G.best); G.newBest=true; }
-    lbSubmit(G.score);
+    if(G.newBest) lbSubmit(G.score);   /* 개인 최고점 갱신 때만 전송 — 쓰기 절약 */
     setState('over');
   }
 }
@@ -3095,7 +3095,7 @@ async function lbSync(){
       const f=x.document.fields;
       const n=String((f.n&&f.n.stringValue)||'DJ').slice(0,12);
       const sc=+((f.s&&(f.s.integerValue||f.s.doubleValue))||0);
-      if(n===lbTag()||seen.has(n)) continue;              /* 내 기록·중복 닉은 제외 (YOU로 합류) */
+      if(n===lbTag()||n===lbName()||seen.has(n)) continue;   /* 내 기록·중복 닉은 제외 (YOU로 합류) */
       seen.add(n); rows.push({n,s:sc});
       if(rows.length>=10) break;
     }
@@ -3104,13 +3104,15 @@ async function lbSync(){
 }
 async function lbSubmit(score){
   if(!FIREBASE.projectId||!score) return;
-  try{
-    await fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/scores?key=${FIREBASE.apiKey}`,
-      {method:'POST',headers:{'Content-Type':'application/json'},
-       body:JSON.stringify({fields:{n:{stringValue:lbTag()},s:{integerValue:String(score)},t:{integerValue:String(Date.now())}}})});
+  try{   /* 플레이어당 문서 1개(tag=문서ID) — 보안규칙이 '점수는 오르기만' 강제 → 항상 최고점 유지 */
+    await fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/scores/${encodeURIComponent(lbTag())}?key=${FIREBASE.apiKey}`,
+      {method:'PATCH',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({fields:{n:{stringValue:lbName()},s:{integerValue:String(score)},t:{integerValue:String(Date.now())}}})});
     lbSync();
   }catch(e){}
 }
+/* 표시 이름 — 기본은 tag, 나중에 닉네임 입력받으면 djr_name에 저장 */
+function lbName(){ try{ return (localStorage.getItem('djr_name')||lbTag()).slice(0,16); }catch(e){ return lbTag(); } }
 /* 리더보드 — Firebase 미설정 시 브랜드풍 DJ 차트에 플레이어 점수가 끼어든다 */
 const LB_BOARD=[
   {n:'808 KING',s:198400},{n:'DJ GOCHU',s:176250},{n:'NOODLE NAS',s:152900},
