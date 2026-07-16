@@ -970,7 +970,7 @@ function update(dt){
     }
     /* each section = one bowl: pot resets and is sized by that section's servings (1~4) */
     const sk=cn.sec||cn.flavor, sec=cn.order.no+'-'+sk;
-    if(sec!==G.curSection){
+    if(sec!==G.curSection && !G.eat){                /* 손님이 먹는 동안엔 냄비를 안 바꾼다 — 다 먹고 전환 */
       G.curSection=sec;
       if(T3.ok){ T3.serveClear(); T3.setPotFor((sk==='jjaguri'?2:1)*cn.order.counts[sk]); }  /* 짜파구리 1개=2봉지 규모 */
     }
@@ -2172,6 +2172,7 @@ function drawMascot(x,y,s,fk,mood,t){
    BACKGROUND (bg canvas, under the 3D layer)
    ========================================================= */
 function bgFlavor(){
+  if(G.eat) return G.eat.flavor;                 /* 손님이 먹는 동안엔 방금 서빙한 라면을 유지 */
   const n=G.notes[Math.min(G.noteIdx,G.notes.length-1)];
   return n?(n.sec||n.flavor):'ramyun';
 }
