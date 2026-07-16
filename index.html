@@ -40,7 +40,7 @@ const FLAVORS = {
   buldak : {key:'buldak',  label:'BULDAK',  ko:'불닭',   color:'#E8431F', deep:'#7c1503', broth:0xE01B06},
   jjapa  : {key:'jjapa',   label:'JJAPA',   ko:'짜파',   color:'#8a5432', deep:'#33190a', broth:0x1A0D05},
   neogury: {key:'neogury', label:'NEOGURY', ko:'너구리', color:'#EF8524', deep:'#87430a', broth:0xD96A15},
-  jjaguri: {key:'jjaguri', label:'JJAPAGURI',ko:'짜파구리',color:'#C0703A', deep:'#3d1e08', broth:0x51280E}
+  jjaguri: {key:'jjaguri', label:'JJAPAGURI',ko:'짜파구리',color:'#CE8046', deep:'#4A2810', broth:0x6E3D18}
 };
 const SEQ = ['ramyun','buldak','jjapa','neogury'];
 const PADS = [
@@ -1689,7 +1689,7 @@ function update3D(dt){
   T3.brothMat.emissive.lerp(new THREE.Color(fb.broth),0.05);   /* 국물색 그대로 발광 — 쨍한 라면색 */
   T3.brothMat.emissiveIntensity=(fb.key==='jjapa'?0.16:0.5)+T3.punch*1.3+(G.fever?0.3+0.18*Math.sin(G.time*9):0);
   /* noodles pick up the sauce — dark for jjapa, red-tinged for buldak */
-  T3.noodleMat.color.lerp(new THREE.Color(fb.key==='jjapa'?0x6E4419:fb.key==='jjaguri'?0x8A5A24:fb.key==='buldak'?0xE88A38:0xF6D468),0.05);
+  T3.noodleMat.color.lerp(new THREE.Color(fb.key==='jjapa'?0x6E4419:fb.key==='jjaguri'?0xA5702F:fb.key==='buldak'?0xE88A38:0xF6D468),0.05);
   T3.noodleMat.emissive.copy(T3.noodleMat.color).multiplyScalar(0.22);   /* 면발도 또렷하게 */
   /* induction heat — the LP visibly glows under the pot */
   const heat=(G.state==='game'?1:0.2)*(0.55+Math.min(0.45,G.combo*0.02));
@@ -2783,10 +2783,14 @@ function drawEat(){
   if(!G.eat) return;
   const srvE=Math.min(4,(G.eat.flavor==='jjaguri'?2:1)*(G.eat.serv||1));   /* 실질 인분수 */
   const SLURP=[1.44,2.0,2.5,3.0][srvE-1], DUR=SLURP+0.71;                  /* 많이 먹을수록 오래 */
+  const cEat=SLURP/srvE;                           /* 젓가락질 1회 = 1인분: 인분수만큼만 젓가락질 */
   const t=G.time-G.eat.t0;
   if(t>DUR){ G.eat=null; if(T3.ok) T3.serveClear(); return; }   /* 완식 — 빈 그릇 회수 */
-  if(T3.ok&&t>=0){                                 /* 먹을수록 3D 면·토핑이 실제로 줄어든다 */
-    const keep=Math.max(0.001,1-(t/SLURP));
+  if(T3.ok&&t>=0){                                 /* 한 젓가락 삼킬 때마다 1인분씩 계단식 소진 */
+    const pc=clamp((t%cEat)/cEat,0,1);
+    const eatPh=easeIn(clamp((pc-0.62)/0.34,0,1)); /* 지금 입에 넣는 분량만 실시간 감소 */
+    const prog=t>=SLURP?1:Math.min(1,(Math.floor(t/cEat)+eatPh)/srvE);
+    const keep=Math.max(0.001,1-prog);
     for(const tube of T3.noodleTubes) if(tube.userData.tgt>keep) tube.userData.tgt=keep;
     for(const k in T3.tops){ const tp=T3.tops[k]; if(tp.userData.tgt>keep) tp.userData.tgt=keep; }
   }
@@ -2933,9 +2937,9 @@ function drawEat(){
 
   if(!happy){
     /* ---- chopsticks lift a FAT bundle of noodles into the mouth ---- */
-    const c=[0.72,0.62,0.55,0.34][srvE-1];          /* 1인분 2번 → 4인분 9연속 후다닥 */
+    const c=cEat;                                   /* 젓가락질 횟수 = 정확히 인분수 */
     const p=(t%c)/c;
-    if(srvE>=4&&p<0.1) G.shake=Math.max(G.shake,2.4);   /* 입질마다 화면이 들썩 */
+    if(srvE>=4&&p<0.08) G.shake=Math.max(G.shake,2.2);  /* 4인분은 입질마다 들썩 */
     const grow=easeOut(clamp(p/0.26,0,1));           /* pick up from the bowl */
     const liftP=easeOut(clamp((p-0.26)/0.36,0,1));   /* carry to the mouth   */
     const eatP=easeIn(clamp((p-0.62)/0.34,0,1));     /* whole bite goes in   */
@@ -2948,8 +2952,8 @@ function drawEat(){
     if(grow>0.04&&eatP<0.98){
       ctx.lineCap='round';
       const NC={buldak:['#E85A2E','#D6491F'],jjapa:['#6E4419','#5A360F'],
-                jjaguri:['#7A4A20','#684018']}[G.eat.flavor]||['#F2C14E','#E8AF35'];
-      const HI={buldak:'#FFB07A',jjapa:'#B07F45',jjaguri:'#C08F52'}[G.eat.flavor]||'#FFF0B8';
+                jjaguri:['#9A6630','#875724']}[G.eat.flavor]||['#F2C14E','#E8AF35'];   /* 짜파구리는 너구리가 섞여 연한 브라운 */
+      const HI={buldak:'#FFB07A',jjapa:'#B07F45',jjaguri:'#D8A868'}[G.eat.flavor]||'#FFF0B8';
       const NSTR=srvE>=4?13:9;                       /* 대식가는 한 입에 더 많이 */
       for(let i=0;i<NSTR;i++){
         const off=(i-(NSTR-1)/2)*R*0.042;
