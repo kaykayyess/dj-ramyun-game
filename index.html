@@ -2908,11 +2908,12 @@ function drawEat(){
     const lbT=i18n('live');
     ctx.font=`900 ${R*0.24}px ${F_SANS}`;
     const lbW=R*0.52+ctx.measureText(lbT).width;
+    const lbX=fx-R*0.7-lbW, lbY=fy-R*1.5;           /* 얼굴 왼쪽 위 — 화면 밖으로 안 잘림 */
     ctx.fillStyle='rgba(12,8,4,0.85)';
-    rr(ctx,fx+R*0.95,fy-R*1.25,lbW,R*0.42,R*0.12); ctx.fill();
+    rr(ctx,lbX,lbY,lbW,R*0.42,R*0.12); ctx.fill();
     ctx.fillStyle=Math.sin(G.time*6)>0?'#ff2e2e':'#801010';
-    ctx.beginPath(); ctx.arc(fx+R*1.18,fy-R*1.04,R*0.07,0,7); ctx.fill();
-    txt(lbT,fx+R*1.36,fy-R*1.03,R*0.24,'#fff','left',F_SANS,'900');
+    ctx.beginPath(); ctx.arc(lbX+R*0.23,lbY+R*0.21,R*0.07,0,7); ctx.fill();
+    txt(lbT,lbX+R*0.41,lbY+R*0.22,R*0.24,'#fff','left',F_SANS,'900');
   }
   /* ---- 4인분 완식 (불닭 제외): 배불러 죽음 ㅋㅋ ---- */
   if(full&&happy){
