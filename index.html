@@ -2632,7 +2632,7 @@ function drawGame(){
       if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
       const sc=0.85+0.35*easeOut(t/0.3);            /* 천천히 차오르는 팝인 */
       ctx.save(); ctx.globalAlpha=Math.min(1,t/0.12)*(1-easeIn((t-0.15)/1.0));
-      ctx.translate(SW*0.42,SH*0.35); ctx.scale(sc,sc);   /* 레일 아래 — 커진 만큼 왼쪽으로(우측 겹침 방지) */
+      ctx.translate(SW*0.37,SH*0.35); ctx.scale(sc,sc);   /* 레일 아래 — 긴 문구가 얼굴과 충돌 안 하게 더 왼쪽 */
       const sv=clamp(f.serv||1,1,4);
       const pk=f.flavor==='jjaguri'?null:'p_'+SFX_KEY[f.flavor]+sv;
       /* 폴백 문구 = 실제 아트 파일의 문구와 인분별로 1:1 일치 → SVG 미로드(모바일 초반)에도 정확한 타이포 */
@@ -3266,8 +3266,8 @@ function drawAttract(){
     comicText('GAME START',SW/2,SH*0.83,SW*0.07,'#ff4a2a');
   txt(i18n('start_hint'),SW/2,SH*0.878,SW*0.03,'rgba(255,255,255,0.8)');
   if(G.best>0){ ledTxt(`BEST ${String(G.best).padStart(7,'0')}`,SW/2,SH*0.92,SW*0.028,'center'); }
-  txt('DJ Ramyun by 808hertz®',SW/2,SH*0.958,SW*0.026,'rgba(255,255,255,0.45)','center',F_ARCADE,'400');
-  txt('Game produced by O KWON',SW/2,SH*0.985,SW*0.0208,'rgba(255,255,255,0.75)','center',F_ARCADE,'400');   /* +30% */
+  txt('DJ Ramyun by 808hertz®',SW/2,SH*0.958,SW*0.026,'rgba(245,179,27,0.95)','center',F_ARCADE,'400');   /* 브랜드가 주인공 — 골드 */
+  txt('Game produced by O KWON',SW/2,SH*0.985,SW*0.0208,'rgba(255,255,255,0.4)','center',F_ARCADE,'400');   /* 크레딧은 차분하게 */
   txt(BUILD,SW*0.045,SH*0.985,SW*0.013,'rgba(255,255,255,0.25)','left',F_ARCADE,'400');
   /* 🌐 언어 전환 pill (우상단) */
   {
