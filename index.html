@@ -52,15 +52,15 @@ const CUST_CAST = ['trav','carti','jay','ye','bey','phril','snoop','nicki','nigo
 /* 성비 여 60 : 남 40, 인종(흑/동양/백)은 각 1/3 — 성별 먼저, 인종 다음, 멤버 랜덤 */
 const CUST_GROUPS={
   f:[['bey','nicki'],['lisa'],['billie','tay']],
-  m:[['trav','carti','jay','ye','phril','snoop'],['nigo','psy'],['em','posty']]
+  m:[['trav','carti','jay','ye','phril','snoop','vamp'],['nigo','psy'],['em','posty']]
 };
 const pickCust = ()=>{
   const r=Math.random();
   if(r<0.08) return 'kiddo';                       /* 초딩 8% */
   if(r<0.15) return 'granpa';                      /* 힙한 할배 7% */
-  const gs=CUST_GROUPS[Math.random()<0.706?'f':'m'];   /* 성인 70.6% 여성 → 전체(초딩·할배 포함) 기준 여 60% */
+  const gs=CUST_GROUPS[Math.random()<0.541?'f':'m'];   /* 전체 기준 여 46% = 남 46% (초딩 8% 중성) → 남녀 50:50 */
   const grp=gs[irand(0,2)]; return grp[irand(0,grp.length-1)]; };
-const CUST_SKIN = {kiddo:'#EDBE93',granpa:'#C99A6B',trav:'#8A5A3B',carti:'#6E4630',jay:'#7A4E33',ye:'#7E5236',bey:'#B07B4E',phril:'#8A5A3B',snoop:'#6E4630',nicki:'#9A6A44',nigo:'#F2C9A0',lisa:'#F5D3AE',psy:'#EDC49C',em:'#F7E3D4',billie:'#F6E2DA',posty:'#F2D8C4',tay:'#F8E6D8'};
+const CUST_SKIN = {vamp:'#6E4630',kiddo:'#EDBE93',granpa:'#C99A6B',trav:'#8A5A3B',carti:'#6E4630',jay:'#7A4E33',ye:'#7E5236',bey:'#B07B4E',phril:'#8A5A3B',snoop:'#6E4630',nicki:'#9A6A44',nigo:'#F2C9A0',lisa:'#F5D3AE',psy:'#EDC49C',em:'#F7E3D4',billie:'#F6E2DA',posty:'#F2D8C4',tay:'#F8E6D8'};
 /* 손님 대사는 I18N 사전(cq_*)으로 이동 */
 const F_DISP   = 'Shrikhand,"Cooper Black","Arial Rounded MT Bold",serif';
 const F_ARCADE = '"Press Start 2P",ui-monospace,monospace';
@@ -108,7 +108,7 @@ const I18N={
   hq11:'저 사람 유튜버 아냐?', hq12:'구독자보다 줄이 길어',
   hq13:'사장님 진짜 DJ야?', hq14:'면도 비트 타면서 익어 🎧',
   hq15:'다이어트 중이라며?', hq16:'면은 내일의 내가 뺄 거야',
-  cq_kiddo:'용돈 다 털었어요.. 후회 없음', cq_granpa:'할애비 스웩 무시하지 마라 😎',
+  cq_kiddo:'용돈 다 털었어요.. 후회 없음', cq_granpa:'할애비 스웩 무시하지 마라 😎', cq_vamp:'다이아보다 국물이 더 빛나 💎',
   tut_now:'지금이야!!',
   ord_item:'{0} {1}인분', ord_item_guri:'{0} {1}개', ord_end:' 주세요~!', ord_none:'라면 1인분',
   sad_cust:'손님이 실망했다… 💦',
@@ -155,7 +155,7 @@ const I18N={
   hq11:'Is that guy a YouTuber?', hq12:'The line beats his subs',
   hq13:'Is the boss a real DJ?', hq14:'Noodles cook on beat 🎧',
   hq15:"Aren't you on a diet?", hq16:'Tomorrow-me handles that',
-  cq_kiddo:'Spent ALL my allowance.. worth it', cq_granpa:"Don't sleep on grandpa swag 😎",
+  cq_kiddo:'Spent ALL my allowance.. worth it', cq_granpa:"Don't sleep on grandpa swag 😎", cq_vamp:'Broth shinin harder than my ice 💎',
   tut_now:'NOW!!',
   ord_item:'{1}× {0}', ord_item_guri:'{1}× {0}', ord_end:', please!', ord_none:'1 ramyun',
   sad_cust:'The customer is disappointed… 💦',
@@ -197,7 +197,7 @@ const I18N={
   hq11:'あの人ユーチューバー?', hq12:'登録者より行列が長い',
   hq13:'店主ほんとにDJなの?', hq14:'麺がビートで茹だってる 🎧',
   hq15:'ダイエット中じゃ?', hq16:'明日の俺が痩せる',
-  cq_kiddo:'おこづかい全部使った..後悔なし', cq_granpa:'じいちゃんのスウェッグなめんな 😎', tut_now:'今だ!!',
+  cq_kiddo:'おこづかい全部使った..後悔なし', cq_granpa:'じいちゃんのスウェッグなめんな 😎', cq_vamp:'ダイヤよりスープが輝いてる 💎', tut_now:'今だ!!',
   ord_item:'{0} {1}人前', ord_item_guri:'{0} {1}セット', ord_end:'ください~!', ord_none:'ラーメン1人前',
   sad_cust:'お客さんがガッカリ… 💦', spq1:'舌がビリビリビリ—!! 🔥', spq2:'辛すぎて死ぬぅぅ!!! 🥵', spq3:'あの世が見える… 👼',
   spq4:'死亡…天国で会おう 👼', eat_full:'お腹はち切れるぅ…ゲフッ 🤰', eat_mukbang:'モッパン博士認定?? 🎥', eat_default:'ズルズル~ウマすぎ!!',
@@ -226,7 +226,7 @@ const I18N={
   hq11:'那位是網紅吧?', hq12:'隊伍比粉絲還多',
   hq13:'老闆真的是DJ?', hq14:'麵跟著節拍在煮 🎧',
   hq15:'你不是在減肥?', hq16:'交給明天的我',
-  cq_kiddo:'零用錢全花了..不後悔', cq_granpa:'別小看爺爺的swag 😎', tut_now:'就是現在!!',
+  cq_kiddo:'零用錢全花了..不後悔', cq_granpa:'別小看爺爺的swag 😎', cq_vamp:'湯頭比我的鑽石還閃 💎', tut_now:'就是現在!!',
   ord_item:'{0} {1}人份', ord_item_guri:'{0} {1}份', ord_end:',麻煩囉~!', ord_none:'泡麵 1人份',
   sad_cust:'客人好失望… 💦', spq1:'舌頭麻掉啦—!!🔥', spq2:'超派!辣到快死了!!!🥵', spq3:'我看到阿祖了…👼',
   spq4:'已陣亡…天堂見 👼', eat_full:'肚子要爆啦啊啊…嗝 🤰', eat_mukbang:'吃播博士認證??🎥', eat_default:'呼嚕嚕~好吃到升天!',
@@ -255,7 +255,7 @@ const I18N={
   hq11:'那位是网红吧?', hq12:'队伍比粉丝还长',
   hq13:'老板真是DJ?', hq14:'面跟着节拍煮 🎧',
   hq15:'你不是在减肥?', hq16:'交给明天的我',
-  cq_kiddo:'零花钱全花了..不后悔', cq_granpa:'别小看爷爷的swag 😎', tut_now:'就是现在!!',
+  cq_kiddo:'零花钱全花了..不后悔', cq_granpa:'别小看爷爷的swag 😎', cq_vamp:'汤头比我的钻还闪 💎', tut_now:'就是现在!!',
   ord_item:'{0} {1}份', ord_item_guri:'{0} {1}碗', ord_end:',安排上~!', ord_none:'拉面 1份',
   sad_cust:'客人心态崩了… 💦', spq1:'舌头麻了麻了—!! 🔥', spq2:'要被辣死了啊!!! 🥵', spq3:'辣到升天,看见天堂了... 👼',
   spq4:'卒... 我们天堂见 👼', eat_full:'肚子要炸了啊啊... 嗝 🤰', eat_mukbang:'炫饭大师认证?? 🎥', eat_default:'哧溜哧溜~ 绝了!',
@@ -1103,6 +1103,7 @@ const CHIBI={
   billie:{skin:0xF6E2DA,cloth:0x9CCB3B, hair:'shag',   hairC:0x1E5A48},
   posty:{skin:0xF2D8C4, cloth:0x777C82, hair:'shag',   hairC:0x6B4B32, beard:true, neck:'double', neckC:0xF2C14E, grill:'gold'},
   tay:  {skin:0xF8E6D8, cloth:0x7FB3E8, hair:'bangs',  hairC:0xE8C86A, hoops:true},
+  vamp: {skin:0x6E4630, cloth:0x0D0D10, hair:'shag',   hairC:0x0A0A0C, neck:'iced', star:true},
   kiddo:{skin:0xEDBE93, cloth:0x3FA65C, hair:'bcap',   hairC:0x2E8C4A, sc:0.72},
   granpa:{skin:0xC99A6B, cloth:0x6E4FA0, hair:'buzz',  hairC:0xDDD8CE, shades:'slim', beard:'white', neck:'cuban', sc:0.95},
 };
@@ -1218,6 +1219,17 @@ function mkChibi(type){
       d.position.set(Math.cos(a)*0.115,Math.sin(a)*0.115,0.012); d.rotation.z=a; med.add(d); }
     med.position.set(0,0.285,0.19); med.rotation.x=-0.2;
     g.add(med);
+  }else if(P.neck==='iced'){                       /* 주렁주렁 더블 체인 + 초대형 다이아 클러스터 */
+    const DIA2=new THREE.MeshStandardMaterial({color:0xffffff,metalness:0.9,roughness:0.06,emissive:0xA8C4E8,emissiveIntensity:0.45});
+    const c1=add(new THREE.Mesh(new THREE.TorusGeometry(0.145,0.02,8,20),SIL),0,0.43,0.055); c1.rotation.x=1.22;
+    const c2=add(new THREE.Mesh(new THREE.TorusGeometry(0.165,0.016,8,20),GOLD),0,0.4,0.065); c2.rotation.x=1.2;
+    const big=add(new THREE.Mesh(new THREE.OctahedronGeometry(0.085),DIA2),0,0.27,0.2);
+    big.rotation.z=0.35;
+    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2;
+      add(new THREE.Mesh(new THREE.OctahedronGeometry(0.028),DIA2),
+        Math.cos(a)*0.11,0.27+Math.sin(a)*0.1,0.185); }
+    for(const sg of[-1,1])                          /* 다이아 스터드 귀걸이 */
+      add(new THREE.Mesh(new THREE.OctahedronGeometry(0.024),DIA2),sg*0.3,0.66,0.05);
   }else if(P.neck==='cuban'){                      /* 두툼한 골드 큐반 체인 */
     const ch=add(new THREE.Mesh(new THREE.TorusGeometry(0.15,0.028,8,20),GOLD),0,0.41,0.06);
     ch.rotation.x=1.22;
@@ -1252,6 +1264,10 @@ function mkChibi(type){
     const m2=P.neckC?M(P.neckC,0.3):SIL;
     const c1=add(new THREE.Mesh(new THREE.TorusGeometry(0.128,0.009,6,18),m2),0,0.44,0.05); c1.rotation.x=1.25;
     const c2=add(new THREE.Mesh(new THREE.TorusGeometry(0.155,0.009,6,18),m2),0,0.40,0.07); c2.rotation.x=1.2;
+  }
+  if(P.star){                                      /* 눈밑 별 타투 */
+    const st2=add(new THREE.Mesh(new THREE.CircleGeometry(0.024,5),M(0x14100C,0.4)),0.19,0.63,0.292);
+    st2.rotation.z=0.3;
   }
   if(P.hoops) for(const s of[-1,1])
     add(new THREE.Mesh(new THREE.TorusGeometry(0.05,0.012,6,14),GOLD),s*0.29,0.63,0.03);
@@ -1988,7 +2004,7 @@ function drawCust(x,y,r,type,t,mood='idle'){
   /* ---- hair & hats over the face ---- */
   if(type==='trav'){ ctx.fillStyle='#1B1410';      /* braid crown */
     ctx.beginPath(); ctx.arc(0,-r*0.4,r*0.82,Math.PI*1.02,Math.PI*1.98); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-  if(type==='carti'||type==='billie'||type==='posty'){ ctx.fillStyle=type==='billie'?'#1E5A48':type==='posty'?'#6B4B32':'#121212';   /* shag + spiky edges */
+  if(type==='carti'||type==='billie'||type==='posty'||type==='vamp'){ ctx.fillStyle=type==='billie'?'#1E5A48':type==='posty'?'#6B4B32':type==='vamp'?'#0A0A0C':'#121212';   /* shag + spiky edges */
     ctx.beginPath(); ctx.arc(0,-r*0.38,r*0.84,Math.PI*1.0,Math.PI*2.0); ctx.closePath(); ctx.fill(); ctx.stroke();
     for(let i=-2;i<=2;i++){ ctx.beginPath();
       ctx.moveTo(i*r*0.3-r*0.1,-r*0.42); ctx.lineTo(i*r*0.3,-r*0.12); ctx.lineTo(i*r*0.3+r*0.1,-r*0.42);
@@ -2060,6 +2076,13 @@ function drawCust(x,y,r,type,t,mood='idle'){
     }
   }
 
+  if(type==='vamp'){                               /* 눈밑 별 타투 + 다이아 스터드 */
+    ctx.fillStyle=dark; starP(r*0.52,r*0.18,r*0.09,0.3); ctx.fill();
+    for(const sg of[-1,1]){ ctx.fillStyle='#EAF2FF';
+      starP(sg*r*0.95,r*0.05,r*0.08,0.5); ctx.fill();
+      ctx.strokeStyle='rgba(160,190,230,0.8)'; ctx.lineWidth=lw*0.5; starP(sg*r*0.95,r*0.05,r*0.08,0.5); ctx.stroke();
+      ctx.strokeStyle=dark; ctx.lineWidth=lw; }
+  }
   if(type==='granpa'){ ctx.strokeStyle='#E8E4DC'; ctx.lineWidth=lw*1.5;
     for(const s of[-1,1]){ ctx.beginPath(); ctx.moveTo(s*r*0.2,-r*0.32); ctx.lineTo(s*r*0.56,-r*0.38); ctx.stroke(); }
     ctx.strokeStyle=dark; ctx.lineWidth=lw; }
