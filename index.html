@@ -905,7 +905,7 @@ function domOf(order){
 }
 function finishOrder(order){
   const ratio=order.hit/order.total;
-  if(T3.ok) T3.serveClear();   // the pot is emptied — bowl handed to the customer
+  /* 냄비는 즉시 안 비운다 — 손님이 먹는 동안 3D 면이 실제로 줄어든다 (drawEat가 처리) */
   if(order.tut){                                   /* 연습 손님: 성공(전부 명중)할 때까지 반복 */
     if(order.miss===0){                            /* 다 맞췄다 → 졸업, 진짜 영업 시작 */
       G.tut=false; window.__tutDone=true;
@@ -916,6 +916,7 @@ function finishOrder(order){
       spawnFX({kind:'banner',text:i18n('first_bowl'),t0:G.time});
       pushOrder(); pushOrder();
     }else{                                          /* 놓쳤다 → 벌칙 없이 다시 연습 손님 */
+      if(T3.ok) T3.serveClear();
       G.combo=0; G.fever=false;
       spawnFX({kind:'banner',text:i18n('tut_retry'),t0:G.time});
       pushTutorialOrder();
@@ -948,6 +949,7 @@ function finishOrder(order){
     slurpFX();
     G.eat={t0:G.time,customer:order.customer,bonus:b,perfect:false,heart:false,flavor:domOf(order),spice:domOf(order)==='buldak'?(order.counts.buldak||1):0,serv:order.counts[domOf(order)]||1};
   }else{
+    if(T3.ok) T3.serveClear();                     /* 손님이 안 먹고 감 — 그릇 회수 */
     G.pStreak=0;
     G.toasts.push({kind:'angry',t0:G.time,order});
   }
@@ -2773,7 +2775,12 @@ function drawMiniBowl(x,y,w,fk,t,tilt){
 function drawEat(){
   if(!G.eat) return;
   const t=G.time-G.eat.t0, DUR=2.15, SLURP=1.44;
-  if(t>DUR){ G.eat=null; return; }
+  if(t>DUR){ G.eat=null; if(T3.ok) T3.serveClear(); return; }   /* 완식 — 빈 그릇 회수 */
+  if(T3.ok&&t>=0){                                 /* 먹을수록 3D 면·토핑이 실제로 줄어든다 */
+    const keep=Math.max(0.001,1-(t/SLURP));
+    for(const tube of T3.noodleTubes) if(tube.userData.tgt>keep) tube.userData.tgt=keep;
+    for(const k in T3.tops){ const tp=T3.tops[k]; if(tp.userData.tgt>keep) tp.userData.tgt=keep; }
+  }
   const a=t<0.15?t/0.15:t>DUR-0.22?Math.max(0,1-(t-(DUR-0.22))/0.22):1;
   const cy=SH*0.44;
   ctx.save(); ctx.globalAlpha=clamp(a,0,1);
