@@ -2639,8 +2639,8 @@ function drawGame(){
       const fbtxt = f.flavor==='jjaguri'
         ? (sv>=2?'JJAPAGURI ×2!!':'JJAPAGURI!!')
         : (FB_TYPO[SFX_KEY[f.flavor]]||[])[sv-1];
-      if(!(pk&&drawArt(pk,0,0,SW*0.48)) && fbtxt)   /* +50% */
-        comicText(fbtxt,0,0,SW*0.069,'#F5E056');
+      if(!(pk&&drawArt(pk,0,0,SW*0.384)) && fbtxt)   /* +50% 후 -20% */
+        comicText(fbtxt,0,0,SW*0.0552,'#F5E056');
       ctx.restore();
     }else if(f.kind==='artslam'){
       if(G.time<G.drop && G.time-G.dropT0<1.5) continue;   /* 드랍 타이틀과 겹침 금지 */
@@ -2714,6 +2714,7 @@ function orderSpeech(o){
   return (parts.length?parts.join(' · '):i18n('ord_none'))+i18n('ord_end');
 }
 function drawToasts(){
+  if(G.toasts.length>2) G.toasts.splice(0,G.toasts.length-2);   /* 최대 2개 — 3개부터 정신없다 */
   G.toasts.forEach((tst,i)=>{
     const t=G.time-tst.t0;
     if(tst.kind==='order'){
