@@ -2029,33 +2029,48 @@ function steamIcon(c,x,y,s,color,lw,flavor){
   c.restore();
 }
 /* HUD 라이프 전용: 유리알처럼 반질한 입체 하트 */
-function heart3d(x,y,s,alive,ph=0){
-  ctx.save();
-  const pu=alive?1+0.05*Math.sin(G.time*4.6+ph):1;      /* 두근두근 */
-  ctx.translate(x,y); ctx.scale(pu,pu);
-  const P=()=>{ ctx.beginPath();
-    ctx.moveTo(0,s*0.4);
-    ctx.bezierCurveTo(-s*0.64,-s*0.02,-s*0.46,-s*0.62,0,-s*0.26);
-    ctx.bezierCurveTo(s*0.46,-s*0.62,s*0.64,-s*0.02,0,s*0.4);
-    ctx.closePath(); };
+/* 하트는 매 프레임 shadowBlur(블러 패스)+그라디언트 2개를 3번씩 그리면 모바일에서 비싸다
+   → 스프라이트로 한 번 굽고 drawImage로 재사용 (두근거림은 스케일로) */
+const HEART_CV={};
+function heartSprite(alive,s){
+  const key=(alive?'a':'d')+Math.round(s);
+  if(HEART_CV[key]) return HEART_CV[key];
+  const pad=s*0.75, w=Math.ceil((s*1.5+pad*2)*DPR), h=Math.ceil((s*1.5+pad*2)*DPR);
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  const x=cv.getContext('2d');
+  x.setTransform(DPR,0,0,DPR,0,0);
+  x.translate(s*0.75+pad,s*0.75+pad);
+  const P=()=>{ x.beginPath();
+    x.moveTo(0,s*0.4);
+    x.bezierCurveTo(-s*0.64,-s*0.02,-s*0.46,-s*0.62,0,-s*0.26);
+    x.bezierCurveTo(s*0.46,-s*0.62,s*0.64,-s*0.02,0,s*0.4);
+    x.closePath(); };
   if(alive){
-    ctx.shadowColor='rgba(255,46,80,0.85)'; ctx.shadowBlur=s*0.55;
-    const g=ctx.createRadialGradient(-s*0.2,-s*0.28,s*0.06,-s*0.05,-s*0.02,s*0.85);
+    x.shadowColor='rgba(255,46,80,0.85)'; x.shadowBlur=s*0.55;
+    const g=x.createRadialGradient(-s*0.2,-s*0.28,s*0.06,-s*0.05,-s*0.02,s*0.85);
     g.addColorStop(0,'#ff8ba0'); g.addColorStop(0.42,'#ff2e4d'); g.addColorStop(0.8,'#c40f2e'); g.addColorStop(1,'#8f0a22');
-    ctx.fillStyle=g; P(); ctx.fill();
-    ctx.shadowBlur=0;
-    const g2=ctx.createLinearGradient(0,-s*0.1,0,s*0.42);   /* 아래쪽 깊이 음영 */
+    x.fillStyle=g; P(); x.fill();
+    x.shadowBlur=0;
+    const g2=x.createLinearGradient(0,-s*0.1,0,s*0.42);
     g2.addColorStop(0,'rgba(0,0,0,0)'); g2.addColorStop(1,'rgba(90,0,14,0.45)');
-    ctx.fillStyle=g2; P(); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.85)';                 /* 유리 하이라이트 */
-    ctx.beginPath(); ctx.ellipse(-s*0.22,-s*0.3,s*0.14,s*0.085,-0.5,0,7); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.4)';
-    ctx.beginPath(); ctx.arc(s*0.16,-s*0.34,s*0.045,0,7); ctx.fill();
-    ctx.strokeStyle='rgba(255,170,185,0.5)'; ctx.lineWidth=s*0.05; P(); ctx.stroke();
+    x.fillStyle=g2; P(); x.fill();
+    x.fillStyle='rgba(255,255,255,0.85)';
+    x.beginPath(); x.ellipse(-s*0.22,-s*0.3,s*0.14,s*0.085,-0.5,0,7); x.fill();
+    x.fillStyle='rgba(255,255,255,0.4)';
+    x.beginPath(); x.arc(s*0.16,-s*0.34,s*0.045,0,7); x.fill();
+    x.strokeStyle='rgba(255,170,185,0.5)'; x.lineWidth=s*0.05; P(); x.stroke();
   }else{
-    ctx.fillStyle='rgba(255,255,255,0.08)'; P(); ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=s*0.05; P(); ctx.stroke();
+    x.fillStyle='rgba(255,255,255,0.08)'; P(); x.fill();
+    x.strokeStyle='rgba(255,255,255,0.18)'; x.lineWidth=s*0.05; P(); x.stroke();
   }
+  const sp={cv, off:s*0.75+pad, w:w/DPR, h:h/DPR};
+  HEART_CV[key]=sp; return sp;
+}
+function heart3d(x,y,s,alive,ph=0){
+  const sp=heartSprite(alive,s);
+  const pu=alive?1+0.05*Math.sin(G.time*4.6+ph):1;      /* 두근두근 */
+  ctx.save(); ctx.translate(x,y); ctx.scale(pu,pu);
+  ctx.drawImage(sp.cv,-sp.off,-sp.off,sp.w,sp.h);
   ctx.restore();
 }
 function heart(x,y,s,fill,glow){
@@ -2415,52 +2430,78 @@ function drawBG(){
 
 /* ---------- 우주 배경: 별 → 성운 → 슈팅스타 → 밀키웨이 (극소수의 풍경) ---------- */
 const STARS=[...Array(150)].map(()=>({x:Math.random(),y:Math.random(),r:0.6+Math.random()*1.7,tw:Math.random()*6.3,c:Math.random()}));
-function drawSpace(lv){
+/* 우주 배경은 후반에만 켜지는데 매 프레임 별 220개+그라디언트 4개를 새로 그리면
+   모바일 GPU가 버거워진다 → 오프스크린에 한 번 굽고 매 프레임 이미지 1장만 그린다.
+   반짝임은 앞쪽 소수 별만 라이브로 유지 */
+let SPACE_CV=null, SPACE_X=null, spaceLv=-1;
+const LIVE_STARS=12;
+function renderSpaceLayer(lv){
+  if(!SPACE_CV){ SPACE_CV=document.createElement('canvas'); SPACE_X=SPACE_CV.getContext('2d'); }
+  const w=Math.max(1,Math.round(SW*DPR)), h=Math.max(1,Math.round(SH*DPR));
+  if(SPACE_CV.width!==w||SPACE_CV.height!==h){ SPACE_CV.width=w; SPACE_CV.height=h; }
+  const x=SPACE_X;
+  x.setTransform(DPR,0,0,DPR,0,0);
+  x.clearRect(0,0,SW,SH);
   const a1=clamp((lv-0.05)/0.3,0,1);
-  for(let i=0;i<STARS.length;i++){
+  for(let i=LIVE_STARS;i<STARS.length;i++){            /* 앞 12개는 라이브 반짝임용으로 남김 */
     const st=STARS[i];
-    if(i/STARS.length>lv*1.25) continue;                 /* 별이 하나둘 늘어난다 */
+    if(i/STARS.length>lv*1.25) continue;
+    x.globalAlpha=a1*0.78*(0.35+st.c*0.65);
+    x.fillStyle=st.c>0.85?'#ffe9b8':st.c>0.7?'#cfe4ff':'#ffffff';
+    x.beginPath(); x.arc(st.x*SW,st.y*SH,st.r,0,7); x.fill();
+  }
+  x.globalAlpha=1;
+  const a2=clamp((lv-0.45)/0.35,0,1);
+  if(a2>0){                                            /* 성운 */
+    const neb=(cx,cy,r,rc,gc,bc,aa)=>{ const ng=x.createRadialGradient(cx,cy,r*0.1,cx,cy,r);
+      ng.addColorStop(0,`rgba(${rc},${gc},${bc},${aa*a2})`); ng.addColorStop(1,`rgba(${rc},${gc},${bc},0)`);
+      x.fillStyle=ng; x.fillRect(cx-r,cy-r,r*2,r*2); };
+    neb(SW*0.22,SH*0.2,SH*0.24,96,52,190,0.32);
+    neb(SW*0.8,SH*0.32,SH*0.2,20,120,150,0.3);
+    neb(SW*0.6,SH*0.1,SH*0.17,190,50,120,0.26);
+  }
+  const a3=clamp((lv-0.82)/0.18,0,1);
+  if(a3>0){                                            /* 밀키웨이 — 본 사람이 극소수 */
+    x.save(); x.translate(SW/2,SH*0.3); x.rotate(-0.42);
+    const mg=x.createLinearGradient(0,-SH*0.16,0,SH*0.16);
+    mg.addColorStop(0,'rgba(120,90,200,0)');
+    mg.addColorStop(0.35,`rgba(190,170,255,${0.16*a3})`);
+    mg.addColorStop(0.5,`rgba(255,244,225,${0.3*a3})`);
+    mg.addColorStop(0.65,`rgba(150,190,255,${0.16*a3})`);
+    mg.addColorStop(1,'rgba(90,60,160,0)');
+    x.fillStyle=mg; x.fillRect(-SW,-SH*0.16,SW*2,SH*0.32);
+    for(let i=0;i<70;i++){
+      const st=STARS[i%STARS.length];
+      const mx=((st.x*2-0.5)%1.4)-0.2, my=(st.c-0.5)*0.24;
+      x.globalAlpha=a3*0.6*Math.max(0,1-Math.abs(my)*7);
+      x.fillStyle=['#fff','#ffe9c8','#cfe0ff','#ffd7f0'][i%4];
+      x.beginPath(); x.arc(mx*SW,my*SH,0.8+st.r*0.7,0,7); x.fill();
+    }
+    x.restore(); x.globalAlpha=1;
+  }
+  spaceLv=lv;
+}
+function drawSpace(lv){
+  const q=Math.round(lv*40)/40;                        /* 0.025 단위로만 다시 굽는다 */
+  if(q!==spaceLv||!SPACE_CV||SPACE_CV.width!==Math.round(SW*DPR)) renderSpaceLayer(q);
+  bgX.drawImage(SPACE_CV,0,0,SW,SH);                   /* 매 프레임 이미지 1장 */
+  const a1=clamp((lv-0.05)/0.3,0,1);
+  for(let i=0;i<LIVE_STARS;i++){                       /* 소수만 라이브 반짝임 */
+    const st=STARS[i];
+    if(i/STARS.length>lv*1.25) continue;
     const tw=0.55+0.45*Math.sin(G.time*(1.1+st.c*2.2)+st.tw);
     bgX.globalAlpha=a1*tw*(0.35+st.c*0.65);
     bgX.fillStyle=st.c>0.85?'#ffe9b8':st.c>0.7?'#cfe4ff':'#ffffff';
     bgX.beginPath(); bgX.arc(st.x*SW,st.y*SH,st.r,0,7); bgX.fill();
   }
   bgX.globalAlpha=1;
-  const a2=clamp((lv-0.45)/0.35,0,1);
-  if(a2>0){                                              /* 성운 */
-    const neb=(x,y,r,rc,gc,bc,aa)=>{ const ng=bgX.createRadialGradient(x,y,r*0.1,x,y,r);
-      ng.addColorStop(0,`rgba(${rc},${gc},${bc},${aa*a2})`); ng.addColorStop(1,`rgba(${rc},${gc},${bc},0)`);
-      bgX.fillStyle=ng; bgX.fillRect(x-r,y-r,r*2,r*2); };
-    neb(SW*0.22,SH*0.2,SH*0.24,96,52,190,0.32);
-    neb(SW*0.8,SH*0.32,SH*0.2,20,120,150,0.3);
-    neb(SW*0.6,SH*0.1,SH*0.17,190,50,120,0.26);
-  }
-  if(lv>0.55){                                           /* 슈팅스타 */
+  if(lv>0.55){                                         /* 슈팅스타 (가끔이라 저렴) */
     const ph=(G.time%7)/7;
     if(ph<0.12){ const p2=ph/0.12;
       const sx0=SW*(0.9-p2*0.75), sy0=SH*(0.06+p2*0.24);
       bgX.save(); bgX.globalAlpha=Math.sin(p2*Math.PI)*0.9;
       bgX.strokeStyle='#fff'; bgX.lineWidth=1.6; bgX.lineCap='round';
       bgX.beginPath(); bgX.moveTo(sx0,sy0); bgX.lineTo(sx0+SW*0.09,sy0-SH*0.035); bgX.stroke(); bgX.restore(); }
-  }
-  const a3=clamp((lv-0.82)/0.18,0,1);
-  if(a3>0){                                              /* 밀키웨이 — 본 사람이 극소수 */
-    bgX.save(); bgX.translate(SW/2,SH*0.3); bgX.rotate(-0.42);
-    const mg=bgX.createLinearGradient(0,-SH*0.16,0,SH*0.16);
-    mg.addColorStop(0,'rgba(120,90,200,0)');
-    mg.addColorStop(0.35,`rgba(190,170,255,${0.16*a3})`);
-    mg.addColorStop(0.5,`rgba(255,244,225,${0.3*a3})`);
-    mg.addColorStop(0.65,`rgba(150,190,255,${0.16*a3})`);
-    mg.addColorStop(1,'rgba(90,60,160,0)');
-    bgX.fillStyle=mg; bgX.fillRect(-SW,-SH*0.16,SW*2,SH*0.32);
-    for(let i=0;i<70;i++){
-      const st=STARS[i%STARS.length];
-      const mx=(((st.x*2-0.5)+G.time*0.004)%1.4)-0.2, my=(st.c-0.5)*0.24;
-      bgX.globalAlpha=a3*(0.25+0.6*Math.abs(Math.sin(G.time*1.3+i)))*Math.max(0,1-Math.abs(my)*7);
-      bgX.fillStyle=['#fff','#ffe9c8','#cfe0ff','#ffd7f0'][i%4];
-      bgX.beginPath(); bgX.arc(mx*SW,my*SH,0.8+st.r*0.7,0,7); bgX.fill();
-    }
-    bgX.restore(); bgX.globalAlpha=1;
   }
 }
 
@@ -3374,7 +3415,7 @@ function drawAttract(){
   ctx.restore();
 }
 
-const BUILD='v0716f';
+const BUILD='v0717a';
 /* 플레이 타이포 폴백 — 각 인분 아트 파일의 실제 문구와 1:1 (SVG 미로드 시에도 정확) */
 const FB_TYPO={
   ram:["LET'S PLAY","IN THE MIX!","BOSS LEVEL","ARE YOU KIDDING ME?!"],
