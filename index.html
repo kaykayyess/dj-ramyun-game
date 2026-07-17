@@ -329,7 +329,10 @@ function initAudio(){
   if (A.ctx){ if (A.ctx.state==='suspended') A.ctx.resume(); return; }
   try{
     const AC = window.AudioContext||window.webkitAudioContext;
-    A.ctx = new AC();
+    const lowMem=/iP(hone|od)|Android/i.test(navigator.userAgent)
+      ||(navigator.deviceMemory&&navigator.deviceMemory<=4);
+    try{ A.ctx = lowMem ? new AC({sampleRate:32000}) : new AC(); }   /* 폰: 48k→32k = 오디오 메모리 -33% */
+    catch(e){ A.ctx = new AC(); }
     if (A.ctx.state==='suspended') A.ctx.resume();
     const comp=A.ctx.createDynamicsCompressor();
     comp.threshold.value=-14; comp.ratio.value=6;
@@ -342,7 +345,7 @@ function initAudio(){
     const d=A.noiseBuf.getChannelData(0);
     for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
     for(const k in A.raw) decodeSFX(k);
-    for(const k in A.mraw) decodeBGM(k);
+    bgmNeed();
   }catch(e){ A.ctx=null; }
 }
 
@@ -629,18 +632,40 @@ for(const k in EXTRA_SFX){
 for(const k in BGM_FILES){
   (async()=>{ for(const f of BGM_FILES[k]){
     try{ const r=await fetch('sfx/'+encodeURIComponent(f)); if(!r.ok) continue;
-      A.mraw[k]=await r.arrayBuffer(); if(A.ctx) decodeBGM(k); return; }catch(e){}
+      A.mraw[k]=await r.arrayBuffer(); if(A.ctx) bgmNeed(); return; }catch(e){}
   } })();
 }
+/* 저사양 기기 보호: 6트랙 전부 디코딩하면 ≈200MB → 사파리가 탭을 죽인다.
+   필요한 트랙만 디코딩하고 나머지는 즉시 메모리에서 해제 */
+function bgmWanted(){
+  const w=[];
+  if(G.state==='game'){
+    w.push(beatTierForOrder(G.curOrderNo||1));            /* 지금 곡 */
+    w.push(beatTierForOrder((G.curOrderNo||1)+6));        /* 다음 곡 미리 디코딩 */
+    if(G.combo>=12||G.fever||G.time<G.drop) w.push('beat5');  /* 피버 임박할 때만 (평소엔 45MB 절약) */
+  }else w.push('beat1');                                  /* 타이틀·게임오버 */
+  return w.filter((v,i,a)=>v&&a.indexOf(v)===i);
+}
+function bgmNeed(){
+  if(!A.ctx) return;
+  const want=bgmWanted();
+  for(const k of want) decodeBGM(k);
+  for(const k in A.mbuf){                                 /* 안 쓰는 트랙은 해제 */
+    if(want.includes(k)||k===A.bgmKey) continue;
+    delete A.mbuf[k];
+  }
+}
 function decodeBGM(k){
-  const b=A.mraw[k]; if(!b||A.mbuf[k]) return;
+  const b=A.mraw[k]; if(!b||A.mbuf[k]||(A.mdec&&A.mdec[k])) return;
+  (A.mdec=A.mdec||{})[k]=1;
   A.ctx.decodeAudioData(b.slice(0)).then(d=>{
+    delete A.mdec[k];
     A.mbuf[k]=d;
     const ch=d.getChannelData(0), sr=d.sampleRate;      /* mp3 앞뒤 무음 트림 → 루프·그리드 정확 */
     let i0=0; while(i0<ch.length&&Math.abs(ch[i0])<0.02) i0++;
     let i1=ch.length-1; while(i1>i0&&Math.abs(ch[i1])<0.02) i1--;
     A.mtrim=A.mtrim||{}; A.mtrim[k]={lead:i0/sr,end:(i1+1)/sr};
-  }).catch(()=>{});
+  }).catch(()=>{ if(A.mdec) delete A.mdec[k]; });
 }
 function bgmStop(){
   if(A.bgm){ try{ A.bgm.g.gain.setTargetAtTime(0,A.ctx.currentTime,0.3); A.bgm.src.stop(A.ctx.currentTime+1); }catch(e){}
@@ -651,11 +676,11 @@ function bgmUpdate(){
   if(A.boil){ try{ A.boil.g.gain.setTargetAtTime(0,A.ctx.currentTime,0.2); A.boil.src.stop(A.ctx.currentTime+0.8); }catch(e){} A.boil=null; }
   if(A.muted) return;
   if(G.state==='over'){ if(A.bgm) bgmStop(); return; }
-  for(const k in A.mraw) decodeBGM(k);
+  bgmNeed();
   /* 타이틀 = beat1 풀 재생 / 게임 = 진행 비트, 피버·THE DROP = beat5(최고조) */
   const wantTier = G.state==='attract' ? 'beat1'
     : (G.fever||G.time<G.drop) ? 'beat5' : beatTierForOrder(G.curOrderNo||1);
-  const want=resolveBeat(wantTier);
+  const want=A.mbuf[wantTier]?wantTier:(A.bgm?A.bgmKey:resolveBeat(wantTier));   /* 디코딩 전이면 현재 곡 유지 */
   if(!want||want===A.bgmKey) return;
   bgmStop();
   const src=A.ctx.createBufferSource(); src.buffer=A.mbuf[want]; src.loop=true;
@@ -767,8 +792,8 @@ function windows(){ let l = clamp(1.5 - 0.65*(G.diff||0), 0.85, 1.5);
 function orderParams(no){
   /* 음악이 있으면 노트도 음악 BPM 그대로 — 난이도는 밀도로 올린다 */
   /* 노트 그리드 BPM = 이 주문에 깔릴 비트의 실측 BPM (음악·노트 싱크) */
-  const mkey=(A.mbuf&&A.mbuf[beatTierForOrder(no)])?beatTierForOrder(no):(A.bgmKey||'');
-  const bpm = mkey ? A.MUSIC_BPM[mkey]*rateForOrder(no) : Math.min(86+(no-1)*1.8, 160);
+  const mkey=beatTierForOrder(no);   /* 디코딩 상태와 무관 — 정적 BPM 표로 그리드 확정 */
+  const bpm = A.MUSIC_BPM[mkey] ? A.MUSIC_BPM[mkey]*rateForOrder(no) : Math.min(86+(no-1)*1.8, 160);
   const r=Math.random();
   const secN = no<=18?1 : no<=26?(r<0.28?2:1) : (r<0.12?3:r<0.55?2:1); /* 한 사람당 보통 1개 */
   /* 인분 성장 곡선(천천히): 1인분만 → 2인분 섞임 → 3인분 → 4인분. mn을 낮게 둬서 1인분도 계속 나온다 */
