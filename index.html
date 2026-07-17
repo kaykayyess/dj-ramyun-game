@@ -2433,60 +2433,73 @@ const STARS=[...Array(150)].map(()=>({x:Math.random(),y:Math.random(),r:0.6+Math
 /* 우주 배경은 후반에만 켜지는데 매 프레임 별 220개+그라디언트 4개를 새로 그리면
    모바일 GPU가 버거워진다 → 오프스크린에 한 번 굽고 매 프레임 이미지 1장만 그린다.
    반짝임은 앞쪽 소수 별만 라이브로 유지 */
-let SPACE_CV=null, SPACE_X=null, spaceLv=-1;
+/* 우주는 후반에만 켜지므로 여기가 무거우면 "빨라질 때 렉"으로 체감된다.
+   알파(페이드)는 캐시에 굽지 않는다 — 밝기가 매 프레임 변하니 구우면 계속 다시 구워야 한다.
+   각 레이어를 "최대 밝기"로 딱 한 번만 굽고, 페이드는 drawImage 알파로 준다.
+   별이 하나씩 늘어나는 것도 지우지 않고 새 별만 덧그린다(증분). */
 const LIVE_STARS=12;
-function renderSpaceLayer(lv){
-  if(!SPACE_CV){ SPACE_CV=document.createElement('canvas'); SPACE_X=SPACE_CV.getContext('2d'); }
+const SP={stars:null,neb:null,mw:null,n:LIVE_STARS,w:0,h:0};
+function spLayer(){                                   /* 화면 크기 바뀌면 전부 무효화 */
   const w=Math.max(1,Math.round(SW*DPR)), h=Math.max(1,Math.round(SH*DPR));
-  if(SPACE_CV.width!==w||SPACE_CV.height!==h){ SPACE_CV.width=w; SPACE_CV.height=h; }
-  const x=SPACE_X;
-  x.setTransform(DPR,0,0,DPR,0,0);
-  x.clearRect(0,0,SW,SH);
-  const a1=clamp((lv-0.05)/0.3,0,1);
-  for(let i=LIVE_STARS;i<STARS.length;i++){            /* 앞 12개는 라이브 반짝임용으로 남김 */
-    const st=STARS[i];
-    if(i/STARS.length>lv*1.25) continue;
-    x.globalAlpha=a1*0.78*(0.35+st.c*0.65);
+  if(SP.w!==w||SP.h!==h){ SP.w=w; SP.h=h; SP.stars=SP.neb=SP.mw=null; SP.n=LIVE_STARS; }
+}
+function spNew(){
+  const cv=document.createElement('canvas'); cv.width=SP.w; cv.height=SP.h;
+  const x=cv.getContext('2d'); x.setTransform(DPR,0,0,DPR,0,0);
+  return {cv,x};
+}
+function spStars(n){                                  /* 0..n 별을 최대 밝기로 — 증분 */
+  if(!SP.stars){ SP.stars=spNew(); SP.n=LIVE_STARS; }
+  if(n<SP.n){                                         /* 줄어들 땐(콤보 끊김) 6개 단위로만 다시 */
+    if(SP.n-n<6) return;
+    SP.stars.x.clearRect(0,0,SW,SH); SP.n=LIVE_STARS;
+  }
+  const x=SP.stars.x;
+  for(let i=SP.n;i<n;i++){ const st=STARS[i];
+    x.globalAlpha=0.35+st.c*0.65;                     /* 별별 밝기 차이만 굽는다 */
     x.fillStyle=st.c>0.85?'#ffe9b8':st.c>0.7?'#cfe4ff':'#ffffff';
-    x.beginPath(); x.arc(st.x*SW,st.y*SH,st.r,0,7); x.fill();
-  }
-  x.globalAlpha=1;
-  const a2=clamp((lv-0.45)/0.35,0,1);
-  if(a2>0){                                            /* 성운 */
-    const neb=(cx,cy,r,rc,gc,bc,aa)=>{ const ng=x.createRadialGradient(cx,cy,r*0.1,cx,cy,r);
-      ng.addColorStop(0,`rgba(${rc},${gc},${bc},${aa*a2})`); ng.addColorStop(1,`rgba(${rc},${gc},${bc},0)`);
-      x.fillStyle=ng; x.fillRect(cx-r,cy-r,r*2,r*2); };
-    neb(SW*0.22,SH*0.2,SH*0.24,96,52,190,0.32);
-    neb(SW*0.8,SH*0.32,SH*0.2,20,120,150,0.3);
-    neb(SW*0.6,SH*0.1,SH*0.17,190,50,120,0.26);
-  }
-  const a3=clamp((lv-0.82)/0.18,0,1);
-  if(a3>0){                                            /* 밀키웨이 — 본 사람이 극소수 */
-    x.save(); x.translate(SW/2,SH*0.3); x.rotate(-0.42);
-    const mg=x.createLinearGradient(0,-SH*0.16,0,SH*0.16);
-    mg.addColorStop(0,'rgba(120,90,200,0)');
-    mg.addColorStop(0.35,`rgba(190,170,255,${0.16*a3})`);
-    mg.addColorStop(0.5,`rgba(255,244,225,${0.3*a3})`);
-    mg.addColorStop(0.65,`rgba(150,190,255,${0.16*a3})`);
-    mg.addColorStop(1,'rgba(90,60,160,0)');
-    x.fillStyle=mg; x.fillRect(-SW,-SH*0.16,SW*2,SH*0.32);
-    for(let i=0;i<70;i++){
-      const st=STARS[i%STARS.length];
-      const mx=((st.x*2-0.5)%1.4)-0.2, my=(st.c-0.5)*0.24;
-      x.globalAlpha=a3*0.6*Math.max(0,1-Math.abs(my)*7);
-      x.fillStyle=['#fff','#ffe9c8','#cfe0ff','#ffd7f0'][i%4];
-      x.beginPath(); x.arc(mx*SW,my*SH,0.8+st.r*0.7,0,7); x.fill();
-    }
-    x.restore(); x.globalAlpha=1;
-  }
-  spaceLv=lv;
+    x.beginPath(); x.arc(st.x*SW,st.y*SH,st.r,0,7); x.fill(); }
+  x.globalAlpha=1; SP.n=Math.max(SP.n,n);
+}
+function spNeb(){                                     /* 성운 — 평생 한 번 */
+  if(SP.neb) return; SP.neb=spNew(); const x=SP.neb.x;
+  const neb=(cx,cy,r,rc,gc,bc,aa)=>{ const ng=x.createRadialGradient(cx,cy,r*0.1,cx,cy,r);
+    ng.addColorStop(0,`rgba(${rc},${gc},${bc},${aa})`); ng.addColorStop(1,`rgba(${rc},${gc},${bc},0)`);
+    x.fillStyle=ng; x.fillRect(cx-r,cy-r,r*2,r*2); };
+  neb(SW*0.22,SH*0.2,SH*0.24,96,52,190,0.32);
+  neb(SW*0.8,SH*0.32,SH*0.2,20,120,150,0.3);
+  neb(SW*0.6,SH*0.1,SH*0.17,190,50,120,0.26);
+}
+function spMw(){                                      /* 밀키웨이 — 본 사람이 극소수, 한 번 */
+  if(SP.mw) return; SP.mw=spNew(); const x=SP.mw.x;
+  x.save(); x.translate(SW/2,SH*0.3); x.rotate(-0.42);
+  const mg=x.createLinearGradient(0,-SH*0.16,0,SH*0.16);
+  mg.addColorStop(0,'rgba(120,90,200,0)');
+  mg.addColorStop(0.35,'rgba(190,170,255,0.16)');
+  mg.addColorStop(0.5,'rgba(255,244,225,0.3)');
+  mg.addColorStop(0.65,'rgba(150,190,255,0.16)');
+  mg.addColorStop(1,'rgba(90,60,160,0)');
+  x.fillStyle=mg; x.fillRect(-SW,-SH*0.16,SW*2,SH*0.32);
+  for(let i=0;i<70;i++){ const st=STARS[i%STARS.length];
+    const mx=((st.x*2-0.5)%1.4)-0.2, my=(st.c-0.5)*0.24;
+    x.globalAlpha=0.6*Math.max(0,1-Math.abs(my)*7);
+    x.fillStyle=['#fff','#ffe9c8','#cfe0ff','#ffd7f0'][i%4];
+    x.beginPath(); x.arc(mx*SW,my*SH,0.8+st.r*0.7,0,7); x.fill(); }
+  x.restore();
 }
 function drawSpace(lv){
-  const q=Math.round(lv*40)/40;                        /* 0.025 단위로만 다시 굽는다 */
-  if(q!==spaceLv||!SPACE_CV||SPACE_CV.width!==Math.round(SW*DPR)) renderSpaceLayer(q);
-  bgX.drawImage(SPACE_CV,0,0,SW,SH);                   /* 매 프레임 이미지 1장 */
+  spLayer();
   const a1=clamp((lv-0.05)/0.3,0,1);
-  for(let i=0;i<LIVE_STARS;i++){                       /* 소수만 라이브 반짝임 */
+  const nWant=Math.min(STARS.length,Math.floor(STARS.length*lv*1.25));
+  spStars(nWant);
+  bgX.globalAlpha=a1*0.78;                            /* 페이드는 여기서 — 연속적, 계단 없음 */
+  bgX.drawImage(SP.stars.cv,0,0,SW,SH);
+  const a2=clamp((lv-0.45)/0.35,0,1);
+  if(a2>0){ spNeb(); bgX.globalAlpha=a2; bgX.drawImage(SP.neb.cv,0,0,SW,SH); }
+  const a3=clamp((lv-0.82)/0.18,0,1);
+  if(a3>0){ spMw(); bgX.globalAlpha=a3; bgX.drawImage(SP.mw.cv,0,0,SW,SH); }
+  bgX.globalAlpha=1;
+  for(let i=0;i<LIVE_STARS;i++){                      /* 소수만 라이브 반짝임 */
     const st=STARS[i];
     if(i/STARS.length>lv*1.25) continue;
     const tw=0.55+0.45*Math.sin(G.time*(1.1+st.c*2.2)+st.tw);
@@ -2495,7 +2508,7 @@ function drawSpace(lv){
     bgX.beginPath(); bgX.arc(st.x*SW,st.y*SH,st.r,0,7); bgX.fill();
   }
   bgX.globalAlpha=1;
-  if(lv>0.55){                                         /* 슈팅스타 (가끔이라 저렴) */
+  if(lv>0.55){                                        /* 슈팅스타 (가끔이라 저렴) */
     const ph=(G.time%7)/7;
     if(ph<0.12){ const p2=ph/0.12;
       const sx0=SW*(0.9-p2*0.75), sy0=SH*(0.06+p2*0.24);
@@ -3415,7 +3428,7 @@ function drawAttract(){
   ctx.restore();
 }
 
-const BUILD='v0717a';
+const BUILD='v0717b';
 /* 플레이 타이포 폴백 — 각 인분 아트 파일의 실제 문구와 1:1 (SVG 미로드 시에도 정확) */
 const FB_TYPO={
   ram:["LET'S PLAY","IN THE MIX!","BOSS LEVEL","ARE YOU KIDDING ME?!"],
