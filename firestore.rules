@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// DJ Ramyun — 글로벌 랭킹 (Cloud Firestore 보안 규칙)
+//
+// 구조: scores/{tag}  — 플레이어당 문서 1개 (문서 ID = 기기별 랜덤 태그 'DJ-XXXX')
+//   n: 표시 이름(1~16자)   s: 최고 점수(정수)   t: 마지막 기록 시각(ms)
+//
+// 클라이언트가 REST로 직접 읽고 쓰므로 이 규칙이 유일한 방어선이다.
+//  - 읽기는 공개(랭킹은 공개 정보)
+//  - 쓰기는 필드·범위 검증 + "점수는 오르기만" + 점수 갱신 도배 방지(20초)
+//  - 삭제 불가, scores 외 컬렉션은 전부 차단
+//
+// ⚠️ 클라이언트 점수는 위조할 수 있다(서버가 게임을 검증하지 않음). 이 규칙은 우발적 오염·단순 도배를
+//    막는 수준이다. 1등 경품(Founder's Edition)은 수상 전에 상위권의 플레이 영상으로 반드시 검증할 것.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /scores/{tag} {
+      function inWindow(t) {
+        return t >= request.time.toMillis() - 120000 && t <= request.time.toMillis() + 120000;
+      }
+      function fieldsOk(d) {
+        return d.keys().hasOnly(['n', 's', 't'])
+          && d.n is string && d.n.size() >= 1 && d.n.size() <= 16
+          && d.s is int && d.s > 0 && d.s <= 20000000
+          && d.t is int && inWindow(d.t);
+      }
+
+      allow get: if true;
+      allow list: if true;          // TOP 조회(limit 20) + 순위 집계(COUNT)
+
+      allow create: if tag.matches('DJ-[A-Z0-9]{1,6}')
+                    && fieldsOk(request.resource.data);
+
+      allow update: if fieldsOk(request.resource.data)
+                    && request.resource.data.s >= resource.data.s            // 점수는 오르기만
+                    && (request.resource.data.s == resource.data.s           // 닉네임만 바꾸는 건 자유
+                        || request.resource.data.t - resource.data.t >= 20000); // 점수 갱신은 20초 간격
+
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
