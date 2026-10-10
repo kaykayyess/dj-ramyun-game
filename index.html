@@ -822,11 +822,11 @@ function windows(){ let l = clamp(1.5 - 0.55*(G.lvl||0), 0.95, 1.5);
    - 음악 템포가 바뀌어도(beat1 71→94BPM +32% 등) 체감 부하는 끊기지 않는다 (절벽 제거).
    - 40초 비트 블록마다 숨 고르기 → 고조 파도, 못하면 자비(DDA), 잘하면 몰아침.
    ========================================================= */
-const LV_TAU=260;
-const lvlAt=T=>1-Math.exp(-Math.pow(Math.max(0,T)/LV_TAU,1.25));            /* ease-in: 시작은 아주 완만, 중반에 오르고, 후반에 포화 */
-function lvTime(tPlay){ return tPlay-(G.lvT0||G.musicT0||0); }
+const LV={tau:160,pow:1.12,base:0.55,amp:2.15,boost1:0.5,boost2:0.9,boostCap:150};                                /* 난이도 곡선 파라미터 */
+const lvlAt=T=>1-Math.exp(-Math.pow(Math.max(0,T)/LV.tau,LV.pow));            /* ease-in: 시작은 아주 완만, 중반에 오르고, 후반에 포화 */
+function lvTime(tPlay){ return tPlay-(G.lvT0||G.musicT0||0)+(G.lvX||0); }   /* lvX = 잘하는 동안 앞당겨진 난이도 시간 */
 function npsTarget(T,tPlay){
-  let nps=0.45+1.95*lvlAt(T)+Math.min(0.9,Math.max(0,(T-420)/480)*0.9);      /* 7분 뒤에도 계속 오른다 — 고수가 지루해지지 않게, 그리고 마라톤은 자연스럽게 끝나게 */
+  let nps=LV.base+LV.amp*lvlAt(T)+Math.min(0.9,Math.max(0,(T-420)/480)*0.9);      /* 7분 뒤에도 계속 오른다 — 고수가 지루해지지 않게, 그리고 마라톤은 자연스럽게 끝나게 */
   const e=(tPlay-(G.musicT0||0))-MUSIC_LEN.beat1;
   if(e>=0) nps*=0.90+0.20*((e%BLOCK_SEC)/BLOCK_SEC);                         /* 블록 시작은 숨 고르기, 끝으로 갈수록 고조 */
   return nps*(1+(G.dda||0));
@@ -950,7 +950,7 @@ function startGame(){
   G.hypeLv=0;                /* 맛집 명성도 매 판 다시 쌓는다 */
   G.scroll=0.27;         /* 첫 판이면 1번 주문 = 연습 모드 */
   G.musicT0=pnow();      /* 음악 타임라인 시작 — beat1을 처음부터 전곡 */
-  G.lvT0=G.musicT0; G.lvl=0; G.dda=0; G._hidT=0; G._tutHeld=false; G.tutNudgeT=-9; G.tutNudgeN=0; G.tutNudgeKind='top'; G.tutRound=0; G.tutFlavor='ramyun';   /* 난이도 시계·자비 보정·일시정지 기록 초기화 */
+  G.lvT0=G.musicT0; G.lvX=0; G.lvl=0; G.dda=0; G._hidT=0; G._tutHeld=false; G.tutNudgeT=-9; G.tutNudgeN=0; G.tutNudgeKind='top'; G.tutRound=0; G.tutFlavor='ramyun';   /* 난이도 시계·자비 보정·일시정지 기록 초기화 */
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
   G.pStreak=0;
@@ -1208,6 +1208,10 @@ function update(dt){
   schedulerUpdate();
   G.lvl = G.tut ? 0 : lvlAt(lvTime(pnow()));        /* 난이도 지표(판정창·점수 배율·스크롤)는 시간으로 매끄럽게 */
   G.dda = (G.dda||0)*Math.exp(-dt/60);              /* 자비·몰아치기는 1분 단위로 서서히 사라진다 */
+  if(!G.tut && !G.dying){                           /* 연속 퍼펙트면 난이도 시계가 빨라진다 — 잘하는 사람은 초반 워밍업을 건너뛴다 (한 번 오른 난이도는 내려가지 않음) */
+    const ps=G.pStreak||0, k=ps>=8?LV.boost2:ps>=3?LV.boost1:0;
+    if(k && (G.lvX||0)<LV.boostCap) G.lvX=Math.min(LV.boostCap,(G.lvX||0)+dt*k);
+  }
   // keep the conveyor stocked
   if(!G.tut && G.cursorT - pnow() < 10) pushOrder();
   if(G.noteIdx>220){ G.notes.splice(0,200); G.noteIdx-=200; }
@@ -3619,7 +3623,7 @@ function drawAttract(){
   ctx.restore();
 }
 
-const BUILD='v1010e';
+const BUILD='v1010f';
 /* 플레이 타이포 폴백 — 각 인분 아트 파일의 실제 문구와 1:1 (SVG 미로드 시에도 정확) */
 const FB_TYPO={
   ram:["LET'S PLAY","IN THE MIX!","BOSS LEVEL","ARE YOU KIDDING ME?!"],
