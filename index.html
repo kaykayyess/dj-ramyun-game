@@ -300,6 +300,7 @@ function resize(force){
   const nw=window.innerWidth, nh=window.innerHeight;
   if(!force && nw===VW && nh===VH && ndpr===DPR) return;   /* 변화 없으면 아무것도 안 함 — 반복 클리어 방지 */
   DPR = ndpr; VW = nw; VH = nh;
+  try{ for(const k in HEART_CV) delete HEART_CV[k]; }catch(e){}   /* 해상도가 바뀌면 하트 스프라이트도 새로 */
   for (const c of [bgC, uiC]){ c.width=VW*DPR; c.height=VH*DPR;
     c.style.left='0px'; c.style.top='0px'; c.style.width=VW+'px'; c.style.height=VH+'px'; }
   SH = VH; SW = Math.min(VW, Math.max(320, SH*0.62), 560); SX=(VW-SW)/2;
@@ -791,69 +792,124 @@ const G = {
   score:0, lives:3, combo:0, maxCombo:0, bowls:0, orderCount:0, perfectOrders:0,
   best:+(localStorage.getItem('djr_best')||0), newBest:false,
   bpm:96, notes:[], noteIdx:0, cursorT:0, curOrderNo:0,
-  fever:false, comboT:-9, dmg:0, dying:0, eat:null, drop:0, dropT0:0, tut:false, scroll:0.27, diff:0,
+  fever:false, comboT:-9, dmg:0, dying:0, eat:null, drop:0, dropT0:0, tut:false, scroll:0.27, diff:0, lvl:0, dda:0, lvT0:0,
   fx:[], toasts:[], confetti:[],
   shake:0, flash:0, flashCol:[255,255,255],
   bg:hex2rgb('#F5B31B'),
   padRects:[], padPress:{}, btnRects:{}
 };
-const diffMult=()=>1+(G.diff||0)*1.5;
-function windows(){ let l = clamp(1.5 - 0.65*(G.diff||0), 0.85, 1.5);
+const diffMult=()=>1+(G.lvl||0)*1.5;
+const INPUT_COMP=0.035;                              /* 터치·화면 지연 보정 — 사람은 평균 이만큼 늦게 누른다 */
+function windows(){ let l = clamp(1.5 - 0.55*(G.lvl||0), 0.95, 1.5);
   if(G.tut) l*=1.35;                               /* 연습 주문은 아주 관대하게 */
   return { p:0.09*l, g:0.18*l, b:0.27*l }; }
 
-function orderParams(no){
-  /* 음악이 있으면 노트도 음악 BPM 그대로 — 난이도는 밀도로 올린다 */
-  /* 노트 그리드 BPM = 이 주문에 깔릴 비트의 실측 BPM (음악·노트 싱크) */
-  const bpm = gridBpmAt(G.cursorT);   /* 이 주문이 실제로 흐를 시각의 음악 템포 */
-  const r=Math.random();
-  const secN = no<=18?1 : no<=26?(r<0.28?2:1) : (r<0.12?3:r<0.55?2:1); /* 한 사람당 보통 1개 */
-  /* 인분 성장 곡선(천천히): 1인분만 → 2인분 섞임 → 3인분 → 4인분. mn을 낮게 둬서 1인분도 계속 나온다 */
-  let mn=1,mx=1;
-  if(no>=8){  mx=2; }                              /* 2인분 등장 */
-  if(no>=15){ mx=3; }                              /* 3인분 등장 */
-  if(no>=22){ mn=2; mx=4; }                        /* 4인분 등장 */
-  /* 콤보가 쌓이면 몰아친다 — 미스로 콤보가 깨지면 다시 숨 돌릴 틈 */
-  /* 반박자 노트 섞임 비율 — 주문이 쌓일수록, 콤보가 높을수록 서서히 */
-  const dbl = clamp((no-14)/40,0,0.7) + (G.combo>=30?0.1:0) + (G.combo>=60?0.08:0);   /* 후반은 연타 지옥 — 42주문까지 계속 상승 */
-  return {bpm, secN, mn, mx, dbl:clamp(dbl,0,0.8)};
+/* =========================================================
+   난이도 디렉터 — 난이도 = "지금 이 순간 초당 몇 개를 눌러야 하나(NPS)"
+   - 시간에 따라 매끄럽게 오르는 목표 NPS를 정하고, 주문 후보를 여러 개 뽑아 목표에 맞는 것을 고른다.
+   - 음악 템포가 바뀌어도(beat1 71→94BPM +32% 등) 체감 부하는 끊기지 않는다 (절벽 제거).
+   - 40초 비트 블록마다 숨 고르기 → 고조 파도, 못하면 자비(DDA), 잘하면 몰아침.
+   ========================================================= */
+const LV_TAU=260;
+const lvlAt=T=>1-Math.exp(-Math.pow(Math.max(0,T)/LV_TAU,1.25));            /* ease-in: 시작은 아주 완만, 중반에 오르고, 후반에 포화 */
+function lvTime(tPlay){ return tPlay-(G.lvT0||G.musicT0||0); }
+function npsTarget(T,tPlay){
+  let nps=0.45+1.95*lvlAt(T)+Math.min(0.9,Math.max(0,(T-420)/480)*0.9);      /* 7분 뒤에도 계속 오른다 — 고수가 지루해지지 않게, 그리고 마라톤은 자연스럽게 끝나게 */
+  const e=(tPlay-(G.musicT0||0))-MUSIC_LEN.beat1;
+  if(e>=0) nps*=0.90+0.20*((e%BLOCK_SEC)/BLOCK_SEC);                         /* 블록 시작은 숨 고르기, 끝으로 갈수록 고조 */
+  return nps*(1+(G.dda||0));
+}
+/* 인분 성장 곡선(천천히): 1인분 위주 → 2 → 3 → 4. 1인분도 계속 나온다 */
+const SERV_TBL=[[0.00,1.00,0.00,0.00,0.00],[0.12,0.90,0.10,0.00,0.00],[0.25,0.62,0.38,0.00,0.00],
+                [0.40,0.38,0.42,0.20,0.00],[0.55,0.22,0.33,0.33,0.12],[0.75,0.12,0.26,0.34,0.28],[1.00,0.08,0.22,0.34,0.36]];
+function pickServ(L){
+  let w=SERV_TBL[SERV_TBL.length-1].slice(1);
+  for(let i=1;i<SERV_TBL.length;i++){ const a=SERV_TBL[i-1],b=SERV_TBL[i];
+    if(L<=b[0]){ const k=(L-a[0])/(b[0]-a[0]); w=[0,1,2,3].map(j=>a[j+1]+(b[j+1]-a[j+1])*k); break; } }
+  let r=Math.random(),acc=0; for(let i=0;i<4;i++){ acc+=w[i]; if(r<acc) return i+1; } return 1;
+}
+/* 구성(인분수·섹션 수)은 성장 곡선 L에서 한 번 뽑아 그대로 지키고,
+   쉬는 박자(gap)와 반박자 비율만 조절해 목표 NPS에 맞춘다. 구성이 목표에 못 미치면 못 미친 채로 둔다 —
+   덕분에 큰 주문 뒤에 가벼운 주문이 끼어 자연스러운 숨 고르기가 생긴다. */
+function realizeOrder(plan,spb,dbl,target){
+  const notes=[], secEnd=[]; let tb=0;
+  const step=()=>(Math.random()<dbl?0.5:1);
+  for(const sc of plan){
+    if(sc.guri){
+      for(let i=0;i<sc.n;i++){ notes.push({type:'tap',flavor:'jjapa',sec:sc.f,b:tb}); tb+=step(); }
+      for(let i=0;i<sc.n;i++){ notes.push({type:'tap',flavor:'neogury',sec:sc.f,b:tb}); tb+=step(); }
+    }else{
+      for(let i=0;i<sc.n;i++){ notes.push({type:'tap',flavor:sc.f,sec:sc.f,b:tb}); tb+=step(); }
+    }
+    notes.push({type:'play',flavor:sc.f,sec:sc.f,b:tb}); secEnd.push(notes.length-1);
+  }
+  const N=notes.length, lastB=tb;
+  let bestG=1,bestE=9;
+  for(let g=1;g<=8;g++){                           /* 주문 길이는 박 격자에 스냅되므로 올림한 값으로 계산 */
+    const periodB=Math.ceil(lastB+plan.length*g+1-1e-4);
+    const e=Math.abs(N/(periodB*spb)-target)/target;
+    if(e<bestE){ bestE=e; bestG=g; }
+  }
+  let shift=0, si=0;                               /* gap은 섹션 끝마다 — 뒤 섹션을 gap만큼 민다 */
+  for(let i=0;i<notes.length;i++){
+    notes[i].dt=(notes[i].b+shift)*spb;
+    if(si<secEnd.length && i===secEnd[si]){ shift+=bestG; si++; }
+  }
+  const period=Math.ceil(lastB+plan.length*bestG+1-1e-4)*spb;
+  let burst=0;
+  for(let i=0;i<notes.length;i++){ let c=0; for(let j=i;j<notes.length&&notes[j].dt<notes[i].dt+1.6;j++) c++; burst=Math.max(burst,c); }
+  return {notes,period,burst,gap:bestG,err:bestE,nps:N/period};
+}
+function genOrderCand(L0,spb,target){
+  const combo=G.combo||0;
+  const L=clamp(L0+(G.dda||0)*0.6,0,1);                                     /* 자비: 못하면 구성 자체가 가벼워진다 (인분수·반박자·섹션) */
+  const p2=clamp((L-0.32)*0.8,0,0.42), p3=clamp((L-0.65)*0.5,0,0.14);
+  const r0=Math.random(), secN=r0<p3?3:r0<p3+p2?2:1;                       /* 한 사람당 보통 1개 */
+  const secs=[]; let pool=[...SEQ];
+  if(L0>=0.45 && Math.random()<0.18+0.12*L0){ secs.push('jjaguri'); pool=pool.filter(f=>f!=='jjapa'&&f!=='neogury'); }   /* 짜파구리는 4인분 경험 후 해금 */
+  while(secs.length<secN && pool.length) secs.push(pool.splice(irand(0,pool.length-1),1)[0]);
+  if(!secs.length) secs.push('ramyun');
+  const plan=secs.map(f=>f==='jjaguri'?{f,n:irand(1,2),guri:true}:{f,n:pickServ(L)});
+  const counts={}, sections=[]; let total=0;
+  for(const sc of plan){ counts[sc.f]=sc.n; sections.push({key:sc.f,n:sc.n}); total+=sc.guri?sc.n*2+1:sc.n+1; }
+  const Lx=clamp((lvTime(G.cursorT)-420)/540,0,1);                           /* 7분 이후 후반 가속 */
+  const dbl0=clamp((L-0.15)*0.75,0,0.55)+0.05*Math.min(1,combo/40)+0.12*Lx;   /* 반박자 노트 기본 비율 */
+  let best=null;
+  for(const dbl of [dbl0,Math.min(0.8,dbl0+0.2),Math.min(0.8,dbl0+0.4)]){    /* 목표에 못 미치면 반박자를 늘려 본다 */
+    const c=realizeOrder(plan,spb,dbl,target);
+    if(!best||c.err<best.err) best=c;
+    if(c.err<0.08) break;                                                    /* 이미 맞으면 여유로운 쪽 */
+  }
+  best.counts=counts; best.sections=sections; best.total=total;
+  return best;
+}
+function chooseOrder(L,T,tPlay,spb){
+  const target=npsTarget(T,tPlay);
+  const cap=3+Math.round(3.5*L)+((G.combo||0)>=40?1:0)+(T>420?1:0)+(T>720?1:0);   /* 1.6초 안에 몰릴 수 있는 노트 상한 */
+  let best=null;
+  for(let k=0;k<8;k++){                                                      /* 몰림 상한만 넘지 않으면 첫 구성을 그대로 쓴다 */
+    const c=genOrderCand(L,spb,target);
+    if(c.burst<=cap) return c;
+    if(!best||c.burst<best.burst) best=c;
+  }
+  return best;
 }
 function pushOrder(){
   const no=++G.orderCount;
-  const p=orderParams(no);
-  const spb=60/p.bpm;
-  const order={no, total:0, hit:0, miss:0, customer:pickCust(), bpm:p.bpm, counts:{}, sections:[],
-                live:(no>=5 && Math.random()<0.13)};   /* 가끔 오는 먹방 스트리머 — PERFECT 시 대박 */
-  /* a real order: usually one item, sometimes two, more when the shop gets slammed */
-  let pool=[...SEQ];
-  const secs=[];
-  if(no>=24 && Math.random()<0.32){ secs.push('jjaguri'); pool=pool.filter(f=>f!=='jjapa'&&f!=='neogury'); }  /* 짜파구리는 4인분 경험 후 해금 */
-  while(secs.length<p.secN && pool.length) secs.push(pool.splice(irand(0,pool.length-1),1)[0]);
-  if(!secs.length) secs.push('ramyun');
-  G.diff=Math.min(1,(no-1)/30);                    /* 난이도 지표 (판정창·점수 배율) */
-  const gap = Math.max(1, Math.round(4.6 - no*0.085 - G.combo/20));  /* 후반엔 주문이 거의 연달아 (천천히) */
+  const bpm=gridBpmAt(G.cursorT);                  /* 이 주문이 실제로 흐를 시각의 음악 템포 */
+  const spb=60/bpm;
   let t=G.cursorT;
   if(A.bgmAnchor&&A.bgmBpm){                       /* 음악 박자선에 스냅 */
     const bl=60/A.bgmBpm;
     t=A.bgmAnchor+Math.ceil((t-A.bgmAnchor)/bl-1e-4)*bl;
   }
-  for(const f of secs){
-    if(f==='jjaguri'){
-      const n=irand(1,2);                          /* 짜파구리 1개=짜파1+너1 · 2개=짜파2+너2 */
-      order.counts[f]=n; order.sections.push({key:f,n});
-      order.total+=n*2+1;
-      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:'jjapa',sec:f,time:t,order,bpm:p.bpm}); t+=spb*(Math.random()<p.dbl?0.5:1); }
-      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:'neogury',sec:f,time:t,order,bpm:p.bpm}); t+=spb*(Math.random()<p.dbl?0.5:1); }
-    }else{
-      const n=irand(p.mn,p.mx);
-      order.counts[f]=n; order.sections.push({key:f,n});
-      order.total+=n+1;
-      for(let i=0;i<n;i++){ G.notes.push({type:'tap',flavor:f,sec:f,time:t,order,bpm:p.bpm}); t+=spb*(Math.random()<p.dbl?0.5:1); }
-    }
-    G.notes.push({type:'play',flavor:f,sec:f,time:t,order,bpm:p.bpm}); t+=spb*gap;
-  }
+  const T=lvTime(t), L=lvlAt(T);
+  const c=chooseOrder(L,T,t,spb);
+  const order={no, total:c.total, hit:0, miss:0, customer:pickCust(), bpm, counts:c.counts, sections:c.sections,
+                live:(no>=5 && Math.random()<0.13)};   /* 가끔 오는 먹방 스트리머 — PERFECT 시 대박 */
+  for(const n of c.notes) G.notes.push({type:n.type,flavor:n.flavor,sec:n.sec,time:t+n.dt,order,bpm});
   G.notes[G.notes.length-1].last=true;
-  G.cursorT=t+spb;
+  G.cursorT=t+c.period;
 }
 /* 연습 손님: 라면 2인분(탭2 + PLAY) 짧고 느긋한 그리드 — 성공할 때까지 반복 */
 function pushTutorialOrder(){
@@ -880,6 +936,7 @@ function startGame(){
   G.hypeLv=0;                /* 맛집 명성도 매 판 다시 쌓는다 */
   G.scroll=0.27;         /* 첫 판이면 1번 주문 = 연습 모드 */
   G.musicT0=pnow();      /* 음악 타임라인 시작 — beat1을 처음부터 전곡 */
+  G.lvT0=G.musicT0; G.lvl=0; G.dda=0; G._hidT=0;   /* 난이도 시계·자비 보정·일시정지 기록 초기화 */
   G.cursorT = pnow() + 4*(60/96);
   if(T3.ok) T3.serveClear();
   G.pStreak=0;
@@ -893,16 +950,43 @@ function startGame(){
 }
 
 /* ---------- judgment ---------- */
-function padTap(pad){
+/* 입력 이벤트가 실제로 일어난 시각(pnow 기준 초). 메인스레드가 버벅여 처리가 늦어져도 판정은 눌린 순간 기준 */
+function evT(e){
+  const t=e&&e.timeStamp; if(!(t>0)) return 0;
+  const s=t/1000, n=pnow();
+  return (s<=n+0.02 && n-s<0.6) ? s : 0;            /* 단위·기준이 다른 구형 브라우저는 현재 시각으로 */
+}
+/* 게임 시계를 d초 멈춘다 — 노트만 밀면 음악(곡·템포)과 박자선이 어긋난다. 전부 같이 민다 */
+function pauseShift(d){
+  if(!(d>0.05) || G.state!=='game') return;
+  for(const n of G.notes) n.time+=d;
+  G.cursorT+=d;
+  if(G.musicT0) G.musicT0+=d;                       /* 음악 타임라인(곡 순서·템포 가속) */
+  if(G.lvT0) G.lvT0+=d;                             /* 난이도 시계 */
+  if(A.bgmAnchor) A.bgmAnchor+=d;                   /* 박자선 앵커 */
+  A.bgmKey='';                                      /* BGM을 다시 시작 — 앵커의 박자선 위에서 정렬된다 */
+  if(A.ctx) A.nextBeat=anow()+0.1;
+}
+function oopsTap(){                                  /* 첫 오탭: 콤보만 잃는다 — 하트와 노트는 그대로, 바로잡을 기회 */
+  comboBreak(); G.fever=false;
+  G.shake=Math.max(G.shake,4);
+  scratchFX();
+  const R=regions();
+  spawnFX({kind:'judge',j:'oops',x:R.judgeX,y:R.railY-SH*0.008,t0:G.time});
+}
+function padTap(pad,src,tEv){
   if(G.state==='attract'){ initAudio(); coinFX(); startGame(); return; }
   if(G.state!=='game'||G.dying) return;
   G.padPress[pad]=G.time;
   const note=G.notes[G.noteIdx]; if(!note) return;
   const w=windows();
-  const dt=pnow()-note.time;
+  const dt=(tEv||pnow())-(src==='touch'?INPUT_COMP:src==='key'?0.015:0)-note.time;   /* 눌린 순간 기준 + 입력·화면 지연 보정 */
   if(dt < -w.b) return;                              // way early → ignore
   const need = note.type==='play' ? 'play' : note.flavor;
-  if(pad!==need){ markMiss(note,'wrong'); return; }  // wrong pad = that note is lost
+  if(pad!==need){
+    if(!note._oops){ note._oops=1; oopsTap(); return; }   /* 한 노트당 첫 오탭은 자비 */
+    markMiss(note,'wrong'); return;                  // 같은 노트에 또 오탭 = 놓친 걸로
+  }
   const a=Math.abs(dt);
   applyJudge(a<=w.p?'perfect':a<=w.g?'good':'bad', note);
 }
@@ -915,7 +999,7 @@ function comboBreak(){                              /* 콤보가 끊기는 순�
 }
 function applyJudge(j,note){
   const mult=j==='perfect'?1:j==='good'?0.7:0.3;
-  const pts=Math.round(100*mult*diffMult()*(1+G.combo/100))*(G.fever?2:1)*(G.time<G.drop?3:1);
+  const pts=Math.round(100*mult*diffMult()*(1+Math.min(G.combo,150)/100))*(G.fever?2:1)*(G.time<G.drop?3:1);   /* 콤보 보너스는 ×2.5에서 멈춘다 */
   G.score+=pts;
   if(j==='bad') comboBreak();
   else{
@@ -971,7 +1055,8 @@ function markMiss(note,reason){
     (note.order.secMiss=note.order.secMiss||{})[sk]=((note.order.secMiss||{})[sk]||0)+1;
   }
   comboBreak(); G.fever=false;
-  if(!note.order.tut) G.lives--;                   /* 연습 주문은 하트가 안 닳는다 */
+  if(!note.order.tut){ G.lives--; G.dda=Math.max(-0.30,(G.dda||0)-0.10); }   /* 연습 주문은 하트가 안 닳는다 · 놓치면 다음 손님은 조금 여유롭게 */
+  if(G.lives<=0 && !G.dying) G.dying=G.time;       /* 마지막 하트를 잃은 뒤에 보너스·먹방이 터지지 않도록 먼저 판정 */
   G.dmg=1; G.shake=Math.max(G.shake,8); T3.shake3=1;
   scratchFX();
   const R=regions();
@@ -979,7 +1064,6 @@ function markMiss(note,reason){
   spawnFX({kind:'heartbreak',t0:G.time});
   G.noteIdx++;
   if(note.last) finishOrder(note.order);
-  if(G.lives<=0 && !G.dying){ G.dying=G.time; }
 }
 function domOf(order){
   let bf='ramyun',n=-1;
@@ -997,11 +1081,13 @@ function chugOut(){                                /* 바쁠 때: 앞 손님이 
   G.eat=null;
 }
 function finishOrder(order){
+  if(G.dying){ if(T3.ok) T3.serveClear(); return; }   /* 이미 게임오버 — 보너스·먹방 없음 */
   const ratio=order.hit/order.total;
   /* 냄비는 즉시 안 비운다 — 손님이 먹는 동안 3D 면이 실제로 줄어든다 (drawEat가 처리) */
   if(order.tut){                                   /* 연습 손님: 성공(전부 명중)할 때까지 반복 */
     if(order.miss===0){                            /* 다 맞췄다 → 졸업, 진짜 영업 시작 */
       G.tut=false; window.__tutDone=true;
+      G.lvT0=pnow();                               /* 난이도 시계는 연습이 끝난 순간부터 */
       G.bowls++; G.score+=500;
       slurpFX();
       chugOut();
@@ -1025,6 +1111,7 @@ function finishOrder(order){
       for(let i=0;i<26;i++) G.confetti.push({x:rand(0,SW),y:rand(-SH*0.12,0),vx:rand(-50,50),vy:rand(90,200),rot:rand(0,6.3),vr:rand(-5,5),c:['#ff2e2e','#fff','#F2C14E'][i%3],s:rand(5,10)});
     }
     G.score+=b; G.bowls++; G.perfectOrders++;
+    G.dda=Math.min(0,(G.dda||0)+0.04);             /* 퍼펙트로 안정되면 자비를 서서히 되돌려 준다 (몰아치기는 콤보가 담당) */
     G.pStreak=(G.pStreak||0)+1;                    /* 소문 단계는 update()의 hypeTier()가 판정 */
     const gotHeart = G.lives<3;
     if(gotHeart) G.lives=Math.min(3,G.lives+1);
@@ -1068,6 +1155,8 @@ function update(dt){
   if(A.ctx) bgmUpdate();                          /* 타이틀곡도 재생되도록 상태 무관 갱신 */
   if(G.state!=='game') return;
   schedulerUpdate();
+  G.lvl = G.tut ? 0 : lvlAt(lvTime(pnow()));        /* 난이도 지표(판정창·점수 배율·스크롤)는 시간으로 매끄럽게 */
+  G.dda = (G.dda||0)*Math.exp(-dt/60);              /* 자비·몰아치기는 1분 단위로 서서히 사라진다 */
   // keep the conveyor stocked
   if(!G.tut && G.cursorT - pnow() < 10) pushOrder();
   if(G.noteIdx>220){ G.notes.splice(0,200); G.noteIdx-=200; }
@@ -1075,7 +1164,7 @@ function update(dt){
     if(ht>(G.hypeLv||0)){ G.hypeLv=ht; spawnFX({kind:'banner',text:i18n('hype'+ht),t0:G.time+0.5}); }
     else if(ht<(G.hypeLv||0)) G.hypeLv=ht; }
   /* 난이도 = 속도감: 주문·콤보에 따라 노트가 넓은 간격 그대로 더 빠르게 흐른다 */
-  const scTgt=0.27+clamp((G.curOrderNo-6)*0.012,0,0.36)+Math.min(0.09,G.combo*0.0015);
+  const scTgt=0.27+0.36*G.lvl+Math.min(0.09,G.combo*0.0015);
   G.scroll=lerp(G.scroll,scTgt,Math.min(1,dt*0.7));
   const cn=G.notes[G.noteIdx];
   if(cn){
@@ -1090,7 +1179,7 @@ function update(dt){
       G.curSection=sec;
       if(T3.ok){ T3.serveClear(); T3.setPotFor((sk==='jjaguri'?2:1)*cn.order.counts[sk]); }  /* 짜파구리 1개=2봉지 규모 */
     }
-    if(!G.dying && pnow() > cn.time + windows().b) markMiss(cn,'late');
+    if(!G.dying && pnow() > cn.time + windows().b + INPUT_COMP + 0.005) markMiss(cn,'late');   /* 보정된 탭이 들어올 시간까지 기다린다 */
   }
   if(G.dying && G.time-G.dying>1.15){
     if(G.score>G.best){ G.best=G.score; localStorage.setItem('djr_best',G.best); G.newBest=true; }
@@ -2727,12 +2816,12 @@ function drawGame(){
     const t=G.time-f.t0;
     if(t<0) continue;
     if(f.kind==='judge'){
-      const cfg={perfect:['PERFECT!','#ffe95e',1.25],good:['GOOD','#9be564',1],bad:['BAD…','#bbb',0.8],miss:['MISS!!','#ff5040',1.3]}[f.j];
+      const cfg={perfect:['PERFECT!','#ffe95e',1.25],good:['GOOD','#9be564',1],bad:['BAD…','#bbb',0.8],miss:['MISS!!','#ff5040',1.3],oops:['WRONG!','#ffa94d',0.95]}[f.j];
       const sc=cfg[2]*(1+0.4*Math.sin(Math.min(t*10,Math.PI)));
       ctx.save(); ctx.globalAlpha=1-easeIn(t/0.8);
       ctx.translate(f.x,f.y-t*14); ctx.scale(sc,sc);
       {
-        const jc={perfect:'#FFF6D6',good:'#D9EFC0',bad:'#CFC8BE',miss:'#FF6B5A'}[f.j];
+        const jc={perfect:'#FFF6D6',good:'#D9EFC0',bad:'#CFC8BE',miss:'#FF6B5A',oops:'#FFC27A'}[f.j];
         if(f.j!=='perfect') ctx.globalAlpha*=0.7;
         comicText(cfg[0],0,0,SW*(f.j==='perfect'?0.046:0.036),jc);
       }
@@ -3428,7 +3517,7 @@ function drawAttract(){
   ctx.restore();
 }
 
-const BUILD='v0717b';
+const BUILD='v1010a';
 /* 플레이 타이포 폴백 — 각 인분 아트 파일의 실제 문구와 1:1 (SVG 미로드 시에도 정확) */
 const FB_TYPO={
   ram:["LET'S PLAY","IN THE MIX!","BOSS LEVEL","ARE YOU KIDDING ME?!"],
@@ -3692,7 +3781,7 @@ function shareScore(){
 /* =========================================================
    INPUT
    ========================================================= */
-function pointAt(px,py){
+function pointAt(px,py,tEv){
   if(G.state==='attract'){
     const lr=G.langRect;
     if(lr&&px>=lr.x&&px<=lr.x+lr.w&&py>=lr.y&&py<=lr.y+lr.h){
@@ -3709,14 +3798,23 @@ function pointAt(px,py){
     setState('attract'); return;
   }
   if(G.state==='game'){
-    for(const r of G.padRects)
-      if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h){ padTap(r.key); return; }
+    /* 패드 사이 틈·위아래 빈틈에 떨어진 탭도 가장 가까운 패드로 — "눌렀는데 안 먹힘" 제거 */
+    if(py<regions().padY-SH*0.075) return;
+    let best=null,bd=1e9;
+    for(const r of G.padRects){
+      const d=(px>=r.x&&px<=r.x+r.w)?0:Math.min(Math.abs(px-r.x),Math.abs(px-(r.x+r.w)));
+      if(d<bd){ bd=d; best=r; }
+    }
+    if(best && bd<=Math.max(22,SW*0.07)) padTap(best.key,'touch',tEv);
   }
 }
-uiC.addEventListener('pointerdown',e=>{ e.preventDefault(); unlockAudio(); pointAt(e.clientX,e.clientY); },{passive:false});
+uiC.addEventListener('pointerdown',e=>{ e.preventDefault(); unlockAudio(); pointAt(e.clientX,e.clientY,evT(e)); },{passive:false});
 window.addEventListener('touchend',()=>unlockAudio(),{passive:true});   /* 구형 iOS는 touchend에서만 언락 */
 document.addEventListener('visibilitychange',()=>{   /* iOS: 앱 복귀 시 사운드 복구 */
-  if(!document.hidden){
+  if(document.hidden){
+    if(G.state==='game' && !G._hidT) G._hidT=pnow();                 /* 나간 순간 — 게임 시계를 여기서 멈춘 것으로 친다 */
+  }else{
+    if(G._hidT){ const d=pnow()-G._hidT; G._hidT=0; pauseShift(d); lastT=performance.now(); }   /* 복귀: 노트·음악·난이도 시계를 d초 되감기 */
     if(A.ctx && A.ctx.state!=='running'){ try{ A.ctx.resume(); }catch(e){} }
     if(A._sil){ const pr=A._sil.play(); if(pr&&pr.catch) pr.catch(()=>{}); }
   }
@@ -3730,7 +3828,7 @@ window.addEventListener('keydown',e=>{
   if(G.state==='over'&&(e.key==='Enter'||e.key===' ')){ coinFX(); startGame(); e.preventDefault(); return; }
   if(e.key.toLowerCase()==='m'){ A.muted=!A.muted; if(A.master) A.master.gain.value=A.muted?0:0.9; return; }
   const k=KEYMAP[e.key.toLowerCase()];
-  if(k){ padTap(k); e.preventDefault(); }
+  if(k){ padTap(k,'key',evT(e)); e.preventDefault(); }
 });
 /* (timeline pause-shift now lives in frame(): any render stall
    >0.4s pushes note times forward, so returning from a hidden
@@ -3753,12 +3851,9 @@ function frame(tms){
   if(VW!==window.innerWidth||VH!==window.innerHeight) resize();   /* 리사이즈 이벤트 유실 자가복구 — 2겹 잔상 방지 */
   const raw=(tms-lastT)/1000;
   autoQuality(raw);
-  // render stalled (hidden tab / panel switch) → shift the timeline so the game pauses instead of failing
-  if(G.state==='game' && raw>0.4 && !(window.DJ&&window.DJ.noShift)){
-    for(const n of G.notes) n.time+=raw;
-    G.cursorT+=raw;
-    if(A.ctx) A.nextBeat=anow()+0.1;
-  }
+  /* 렌더가 오래 멈췄다(탭 전환·패널 전환 등) → 게임 시계를 같이 멈춘다. 0.4~1.2초 버벅임은 시계를 밀면
+     음악과 박자가 영구히 어긋나므로 밀지 않는다 (판정은 이벤트 타임스탬프라 제때 누른 탭은 그대로 인정) */
+  if(G.state==='game' && raw>1.2 && !G._hidT && !(window.DJ&&window.DJ.noShift)) pauseShift(raw);
   const dt=Math.min(0.05,raw); lastT=tms;
   G.time+=dt;
   update(dt);
