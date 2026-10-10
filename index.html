@@ -3619,7 +3619,7 @@ function drawAttract(){
   ctx.restore();
 }
 
-const BUILD='v1010d';
+const BUILD='v1010e';
 /* 플레이 타이포 폴백 — 각 인분 아트 파일의 실제 문구와 1:1 (SVG 미로드 시에도 정확) */
 const FB_TYPO={
   ram:["LET'S PLAY","IN THE MIX!","BOSS LEVEL","ARE YOU KIDDING ME?!"],
@@ -3630,7 +3630,7 @@ const FB_TYPO={
 /* ---------- 글로벌 실시간 랭킹 (Firebase Firestore REST) ----------
    웹·iOS·Android 앱이 전부 같은 코드라 하나의 리더보드 공유.
    활성화: FIREBASE에 projectId/apiKey 채우면 끝 — 비어 있으면 로컬 차트로 동작. */
-const FIREBASE={projectId:'',apiKey:'',host:'https://firestore.googleapis.com'};
+const FIREBASE={projectId:'dj-ramyun-ranking',apiKey:'AIzaSyCFBZ4nPB3cnsnmWtX7LPnZ5i1fBD4iUc8',host:'https://firestore.googleapis.com'};
 const FS=()=>`${FIREBASE.host}/v1/projects/${FIREBASE.projectId}/databases/(default)/documents`;
 let _lbT=0, _lbPoll=0;
 function lbTag(){
